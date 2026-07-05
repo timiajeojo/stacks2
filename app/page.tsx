@@ -224,20 +224,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section style={{ paddingTop: 0 }}>
-          <div className="cta-band">
-            <div>
-              <h3>Your first number is on us.</h3>
-              <p>
-                Create an account and get a free verification credit — no
-                card required.
-              </p>
-            </div>
-            <a href="/auth" className="btn btn-primary btn-lg">
-              Create free account
-            </a>
-          </div>
-        </section>
       </div>
 
       <footer>
