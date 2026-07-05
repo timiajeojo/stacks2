@@ -1,65 +1,288 @@
-import Image from "next/image";
+import Ticker from "./components/Ticker";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <header>
+        <div className="navbar">
+          <div className="logo">
+            <span className="logo-mark">#</span>stacksnumber
+          </div>
+          <nav className="links">
+            <a href="#coverage">Coverage</a>
+            <a href="#how">How it works</a>
+            <a href="#">Docs</a>
+          </nav>
+          <div className="nav-actions">
+            <a href="/auth" className="btn btn-ghost">
+              Sign in
+            </a>
+            <a href="/auth" className="btn btn-primary">
+              Get started
+            </a>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      <div className="wrap">
+        <section className="hero" style={{ paddingTop: "88px" }}>
+          <div>
+            <div className="eyebrow">
+              <span className="dot"></span>142,880 codes delivered this week
+            </div>
+            <h1 className="hero-title">
+              A fresh number,
+              <br />
+              every time you need
+              <br className="hide-mobile" />
+              <span className="accent">one to verify.</span>
+            </h1>
+            <p className="hero-sub">
+              Buy a real, working phone line for the minute it takes to
+              receive an SMS code. No contract, no SIM card, no number tied to
+              your name.
+            </p>
+            <div className="hero-cta">
+              <a href="/auth" className="btn btn-primary btn-lg">
+                Get a number →
+              </a>
+            </div>
+            <div className="trust-row">
+              <div className="trust-item">
+                <div className="num mono">61</div>
+                <div className="label">countries live</div>
+              </div>
+              <div className="trust-item">
+                <div className="num mono">9s</div>
+                <div className="label">avg. delivery</div>
+              </div>
+              <div className="trust-item">
+                <div className="num mono">99.2%</div>
+                <div className="label">codes received</div>
+              </div>
+              <div className="trust-item">
+                <div className="num mono">220+</div>
+                <div className="label">services supported</div>
+              </div>
+            </div>
+          </div>
+
+          <Ticker />
+        </section>
+      </div>
+
+      <div className="marquee-section">
+        <div className="wrap">
+          <div className="marquee-label">
+            WORKS WITH THE SERVICES YOU ALREADY VERIFY ON
+          </div>
+          <div className="marquee-row">
+            <span>WhatsApp</span>
+            <span>Telegram</span>
+            <span>Google</span>
+            <span>Instagram</span>
+            <span>Discord</span>
+            <span>TikTok</span>
+            <span>Amazon</span>
+            <span>Uber</span>
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+
+      <div className="wrap">
+        <section id="how">
+          <div className="section-head">
+            <div className="section-tag">001 · THE PROCESS</div>
+            <h2 className="section-title">Three steps, one code.</h2>
+            <p className="section-desc">
+              Every line goes through the same lifecycle — from checkout to
+              retirement — so you always know exactly where your number
+              stands.
+            </p>
+          </div>
+          <div className="flow">
+            <div className="flow-step">
+              <div className="flow-index">01 / PICK A LINE</div>
+              <h3>Choose service &amp; country</h3>
+              <p>
+                Search for WhatsApp, Google, or any of 220+ services, pick a
+                country, and see the live price before you commit.
+              </p>
+              <div className="flow-arrow">→</div>
+            </div>
+            <div className="flow-step">
+              <div className="flow-index">02 / RECEIVE THE CODE</div>
+              <h3>Watch it land in real time</h3>
+              <p>
+                Your number activates instantly. The moment the SMS arrives,
+                the code appears in your dashboard — usually within 9
+                seconds.
+              </p>
+              <div className="flow-arrow">→</div>
+            </div>
+            <div className="flow-step">
+              <div className="flow-index">03 / LINE RETIRES</div>
+              <h3>Number recycles safely</h3>
+              <p>
+                Once you confirm the code, the line closes out. It&apos;s
+                never reused for the same service, so your verification stays
+                clean.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="coverage">
+          <div className="section-head">
+            <div className="section-tag">002 · REACH</div>
+            <h2 className="section-title">
+              Carrier-grade coverage, not a spreadsheet of dead numbers.
+            </h2>
+            <p className="section-desc">
+              We route through direct carrier partnerships, so lines stay
+              live and codes actually arrive.
+            </p>
+          </div>
+          <div className="stat-grid">
+            <div className="stat-card">
+              <div className="num">
+                61<span className="unit">countries</span>
+              </div>
+              <div className="label">Live routing today</div>
+            </div>
+            <div className="stat-card">
+              <div className="num">
+                340<span className="unit">carriers</span>
+              </div>
+              <div className="label">Direct partnerships</div>
+            </div>
+            <div className="stat-card">
+              <div className="num">
+                99.2<span className="unit">%</span>
+              </div>
+              <div className="label">Delivery success rate</div>
+            </div>
+            <div className="stat-card">
+              <div className="num">
+                9<span className="unit">sec</span>
+              </div>
+              <div className="label">Median time to code</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="section-head">
+            <div className="section-tag">003 · FROM THE PEOPLE USING IT</div>
+            <h2 className="section-title">
+              Verified on the road, not just at a desk.
+            </h2>
+          </div>
+          <div className="quote-grid">
+            <div className="quote-card">
+              <p>
+                &quot;stacksnumber&apos;s eSIM activation saved me during my
+                international travels. I could verify accounts without
+                worrying about SIM cards!&quot;
+              </p>
+              <div className="quote-who">
+                <div className="quote-avatar"></div>
+                <div>
+                  <div className="quote-name">Dara Fashina</div>
+                  <div className="quote-role">Frequent traveler</div>
+                </div>
+              </div>
+            </div>
+            <div className="quote-card">
+              <p>
+                &quot;I landed in three countries in one week and never once
+                hunted for a local SIM. A number was always a tap away when I
+                needed a code.&quot;
+              </p>
+              <div className="quote-who">
+                <div className="quote-avatar"></div>
+                <div>
+                  <div className="quote-name">Tobi Adegoke</div>
+                  <div className="quote-role">Remote consultant</div>
+                </div>
+              </div>
+            </div>
+            <div className="quote-card">
+              <p>
+                &quot;My carrier charged a fortune for roaming just to
+                receive one text. Now I just grab a number on stacksnumber
+                and verify in seconds.&quot;
+              </p>
+              <div className="quote-who">
+                <div className="quote-avatar"></div>
+                <div>
+                  <div className="quote-name">Priya Nair</div>
+                  <div className="quote-role">Digital nomad</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style={{ paddingTop: 0 }}>
+          <div className="cta-band">
+            <div>
+              <h3>Your first number is on us.</h3>
+              <p>
+                Create an account and get a free verification credit — no
+                card required.
+              </p>
+            </div>
+            <a href="/auth" className="btn btn-primary btn-lg">
+              Create free account
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <div className="wrap">
+          <div className="footer-grid">
+            <div className="footer-col">
+              <div className="logo" style={{ marginBottom: "14px" }}>
+                <span className="logo-mark">#</span>stacksnumber
+              </div>
+              <p style={{ fontSize: "13.5px", color: "var(--paper-dim)", maxWidth: "220px" }}>
+                Real numbers, one verification at a time.
+              </p>
+            </div>
+            <div className="footer-col">
+              <h4>PRODUCT</h4>
+              <a href="#">Coverage</a>
+              <a href="#">Pricing</a>
+              <a href="#">API docs</a>
+              <a href="#">Status</a>
+            </div>
+            <div className="footer-col">
+              <h4>COMPANY</h4>
+              <a href="#">About</a>
+              <a href="#">Blog</a>
+              <a href="#">Careers</a>
+            </div>
+            <div className="footer-col">
+              <h4>SUPPORT</h4>
+              <a href="#">Help center</a>
+              <a href="#">Contact</a>
+              <a href="#">System status</a>
+            </div>
+            <div className="footer-col">
+              <h4>LEGAL</h4>
+              <a href="#">Terms</a>
+              <a href="#">Privacy</a>
+              <a href="#">Acceptable use</a>
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <span>© 2026 stacksnumber. All lines routed responsibly.</span>
+            <span className="mono">status: all systems live</span>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }
