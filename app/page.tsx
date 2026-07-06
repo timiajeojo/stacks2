@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { MessageSquareCode } from "lucide-react";
 import Ticker from "./components/Ticker";
 
 export default function Home() {
@@ -26,7 +27,9 @@ export default function Home() {
       <header>
         <div className="navbar">
           <div className="logo">
-            <span className="logo-mark">#</span>stacksnumber
+            <span className="logo-mark">
+            <MessageSquareCode size={15} strokeWidth={2.5} />
+            </span>stacksnumber
           </div>
           <nav className="links">
             <a href="#coverage">Coverage</a>
@@ -274,7 +277,9 @@ export default function Home() {
           <div className="footer-grid">
             <div className="footer-col">
               <div className="logo" style={{ marginBottom: "14px" }}>
-                <span className="logo-mark">#</span>stacksnumber
+                <span className="logo-mark">
+                <MessageSquareCode size={15} strokeWidth={2.5} />
+                </span>stacksnumber
               </div>
               <p style={{ fontSize: "13.5px", color: "var(--paper-dim)", maxWidth: "220px" }}>
                 Real numbers, one verification at a time.
