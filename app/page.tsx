@@ -37,10 +37,10 @@ export default function Home() {
             <a href="#">Docs</a>
           </nav>
           <div className="nav-actions">
-            <a href="/auth" className="btn btn-ghost">
+            <a href="/auth?mode=signin" className="btn btn-ghost">
               Sign in
             </a>
-            <a href="/auth" className="btn btn-primary">
+            <a href="/auth?mode=signup" className="btn btn-primary">
               Get started
             </a>
           </div>
@@ -66,7 +66,7 @@ export default function Home() {
               your name.
             </p>
             <div className="hero-cta">
-              <a href="/auth" className="btn btn-primary btn-lg">
+              <a href="/auth?mode=signup" className="btn btn-primary btn-lg">
                 Get a number →
               </a>
             </div>
