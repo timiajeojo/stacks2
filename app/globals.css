@@ -201,3 +201,17 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
   .nav-actions .btn{padding:6px 10px; font-size:12px;}
   .hero-cta .btn-lg{padding:10px 18px; font-size:13.5px;}
 }
+
+/* SCROLL REVEAL ANIMATIONS */
+.reveal{
+  opacity:0;
+  transition: opacity .7s ease, transform .7s ease;
+  will-change: opacity, transform;
+}
+.reveal-left{transform: translateX(-48px);}
+.reveal-up{transform: translateY(40px);}
+.reveal.is-visible{opacity:1; transform: translate(0,0);}
+
+@media (prefers-reduced-motion: reduce){
+  .reveal{opacity:1; transform:none; transition:none;}
+}
