@@ -1,6 +1,26 @@
+"use client";
+
+import { useEffect } from "react";
 import Ticker from "./components/Ticker";
 
 export default function Home() {
+  useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>(".reveal");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" }
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       <header>
@@ -26,7 +46,7 @@ export default function Home() {
 
       <div className="wrap">
         <section className="hero" style={{ paddingTop: "88px" }}>
-          <div>
+          <div className="reveal reveal-left">
             <div className="eyebrow">
               <span className="dot"></span>142,880 codes delivered this week
             </div>
@@ -67,11 +87,13 @@ export default function Home() {
             </div>
           </div>
 
-          <Ticker />
+          <div className="reveal reveal-up" style={{ transitionDelay: "0.15s" }}>
+            <Ticker />
+          </div>
         </section>
       </div>
 
-      <div className="marquee-section">
+      <div className="marquee-section reveal reveal-up">
         <div className="wrap">
           <div className="marquee-label">
             WORKS WITH THE SERVICES YOU ALREADY VERIFY ON
@@ -91,7 +113,7 @@ export default function Home() {
 
       <div className="wrap">
         <section id="how">
-          <div className="section-head">
+          <div className="section-head reveal reveal-up">
             <div className="section-tag">001 · THE PROCESS</div>
             <h2 className="section-title">Three steps, one code.</h2>
             <p className="section-desc">
@@ -101,7 +123,7 @@ export default function Home() {
             </p>
           </div>
           <div className="flow">
-            <div className="flow-step">
+            <div className="flow-step reveal reveal-up">
               <div className="flow-index">01 / PICK A LINE</div>
               <h3>Choose service &amp; country</h3>
               <p>
@@ -110,7 +132,10 @@ export default function Home() {
               </p>
               <div className="flow-arrow">→</div>
             </div>
-            <div className="flow-step">
+            <div
+              className="flow-step reveal reveal-up"
+              style={{ transitionDelay: "0.1s" }}
+            >
               <div className="flow-index">02 / RECEIVE THE CODE</div>
               <h3>Watch it land in real time</h3>
               <p>
@@ -120,7 +145,10 @@ export default function Home() {
               </p>
               <div className="flow-arrow">→</div>
             </div>
-            <div className="flow-step">
+            <div
+              className="flow-step reveal reveal-up"
+              style={{ transitionDelay: "0.2s" }}
+            >
               <div className="flow-index">03 / LINE RETIRES</div>
               <h3>Number recycles safely</h3>
               <p>
@@ -133,7 +161,7 @@ export default function Home() {
         </section>
 
         <section id="coverage">
-          <div className="section-head">
+          <div className="section-head reveal reveal-up">
             <div className="section-tag">002 · REACH</div>
             <h2 className="section-title">
               Carrier-grade coverage, not a spreadsheet of dead numbers.
@@ -144,25 +172,34 @@ export default function Home() {
             </p>
           </div>
           <div className="stat-grid">
-            <div className="stat-card">
+            <div className="stat-card reveal reveal-up">
               <div className="num">
                 61<span className="unit">countries</span>
               </div>
               <div className="label">Live routing today</div>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card reveal reveal-up"
+              style={{ transitionDelay: "0.08s" }}
+            >
               <div className="num">
                 340<span className="unit">carriers</span>
               </div>
               <div className="label">Direct partnerships</div>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card reveal reveal-up"
+              style={{ transitionDelay: "0.16s" }}
+            >
               <div className="num">
                 99.2<span className="unit">%</span>
               </div>
               <div className="label">Delivery success rate</div>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card reveal reveal-up"
+              style={{ transitionDelay: "0.24s" }}
+            >
               <div className="num">
                 9<span className="unit">sec</span>
               </div>
@@ -172,14 +209,14 @@ export default function Home() {
         </section>
 
         <section>
-          <div className="section-head">
+          <div className="section-head reveal reveal-up">
             <div className="section-tag">003 · FROM THE PEOPLE USING IT</div>
             <h2 className="section-title">
               Verified on the road, not just at a desk.
             </h2>
           </div>
           <div className="quote-grid">
-            <div className="quote-card">
+            <div className="quote-card reveal reveal-up">
               <p>
                 &quot;stacksnumber&apos;s eSIM activation saved me during my
                 international travels. I could verify accounts without
@@ -193,7 +230,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="quote-card">
+            <div
+              className="quote-card reveal reveal-up"
+              style={{ transitionDelay: "0.1s" }}
+            >
               <p>
                 &quot;I landed in three countries in one week and never once
                 hunted for a local SIM. A number was always a tap away when I
@@ -207,7 +247,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="quote-card">
+            <div
+              className="quote-card reveal reveal-up"
+              style={{ transitionDelay: "0.2s" }}
+            >
               <p>
                 &quot;My carrier charged a fortune for roaming just to
                 receive one text. Now I just grab a number on stacksnumber
@@ -226,7 +269,7 @@ export default function Home() {
 
       </div>
 
-      <footer>
+      <footer className="reveal reveal-up">
         <div className="wrap">
           <div className="footer-grid">
             <div className="footer-col">
