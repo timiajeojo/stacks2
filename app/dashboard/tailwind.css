@@ -1,10 +1,8 @@
-/* Tailwind v4 setup.
-   We only import the theme + utility layers — NOT preflight — so Tailwind's
-   base reset can't leak into or clash with the existing globals.css used by
-   the landing + auth pages. Content (which files to scan) is auto-detected
-   by Tailwind v4, no config file needed for that. */
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+/* Tailwind v4 — standard full import. Next.js already keeps this CSS
+   scoped to the /dashboard route (imported only via app/dashboard/layout.tsx),
+   so preflight can't leak into the landing/auth pages regardless — no need
+   to import Tailwind's layers piecemeal. */
+@import "tailwindcss";
 
 @theme {
   --color-ink: #0A0F1C;
