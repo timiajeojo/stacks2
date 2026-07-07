@@ -1,19 +1,111 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquareCode } from "lucide-react";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  createUserWithEmailAndPassword,
+  setPersistence,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 import Ticker from "../components/Ticker";
 
 type Mode = "signin" | "signup";
 
+function friendlyError(code: string): string {
+  switch (code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Incorrect email or password.";
+    case "auth/email-already-in-use":
+      return "An account with this email already exists.";
+    case "auth/weak-password":
+      return "Password should be at least 6 characters.";
+    case "auth/invalid-email":
+      return "Enter a valid email address.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a moment and try again.";
+    default:
+      return "Something went wrong. Please try again.";
+  }
+}
+
 function AuthForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("signin");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Sign in fields
+  const [signInEmail, setSignInEmail] = useState("");
+  const [signInPassword, setSignInPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Sign up fields
+  const [fullName, setFullName] = useState("");
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("mode") === "signup") setMode("signup");
   }, [searchParams]);
+
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence
+      );
+      await signInWithEmailAndPassword(auth, signInEmail, signInPassword);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(friendlyError(err?.code));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!agreed) {
+      setError("Please agree to the terms and acceptable use policy.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        signUpEmail,
+        signUpPassword
+      );
+      await updateProfile(cred.user, { displayName: fullName });
+      await setDoc(doc(db, "users", cred.user.uid), {
+        fullName,
+        email: signUpEmail,
+        walletBalance: 0,
+        createdAt: serverTimestamp(),
+      });
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(friendlyError(err?.code));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="screen">
@@ -62,20 +154,42 @@ function AuthForm() {
           <div className="tabs">
             <div
               className={`tab ${mode === "signin" ? "active" : ""}`}
-              onClick={() => setMode("signin")}
+              onClick={() => {
+                setMode("signin");
+                setError("");
+              }}
             >
               Sign in
             </div>
             <div
               className={`tab ${mode === "signup" ? "active" : ""}`}
-              onClick={() => setMode("signup")}
+              onClick={() => {
+                setMode("signup");
+                setError("");
+              }}
             >
               Create account
             </div>
           </div>
 
+          {error && (
+            <div
+              style={{
+                background: "rgba(255,92,92,0.1)",
+                border: "1px solid rgba(255,92,92,0.35)",
+                color: "#ff9b9b",
+                fontSize: "13px",
+                borderRadius: "9px",
+                padding: "10px 14px",
+                marginBottom: "18px",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {mode === "signin" ? (
-            <div>
+            <form onSubmit={handleSignIn}>
               <h2>Welcome back</h2>
               <div className="sub">
                 Sign in to buy numbers and check incoming codes.
@@ -83,23 +197,45 @@ function AuthForm() {
 
               <div className="field">
                 <label>EMAIL</label>
-                <input type="email" placeholder="you@company.com" />
+                <input
+                  type="email"
+                  placeholder="you@company.com"
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
+                  required
+                />
               </div>
               <div className="field">
                 <label>PASSWORD</label>
-                <input type="password" placeholder="••••••••••" />
+                <input
+                  type="password"
+                  placeholder="••••••••••"
+                  value={signInPassword}
+                  onChange={(e) => setSignInPassword(e.target.value)}
+                  required
+                />
               </div>
               <div className="row-between">
                 <label className="remember">
-                  <input type="checkbox" style={{ accentColor: "var(--blue)" }} />
+                  <input
+                    type="checkbox"
+                    style={{ accentColor: "var(--blue)" }}
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   Keep me signed in
                 </label>
                 <a href="#" className="forgot">
                   Forgot password?
                 </a>
               </div>
-              <button className="btn btn-primary btn-lg" style={{ width: "100%" }}>
-                Sign in →
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary btn-lg"
+                style={{ width: "100%", opacity: loading ? 0.7 : 1 }}
+              >
+                {loading ? "Signing in…" : "Sign in →"}
               </button>
 
               <div className="switch-line" style={{ marginTop: "24px" }}>
@@ -108,14 +244,15 @@ function AuthForm() {
                   onClick={(e) => {
                     e.preventDefault();
                     setMode("signup");
+                    setError("");
                   }}
                 >
                   Create an account
                 </a>
               </div>
-            </div>
+            </form>
           ) : (
-            <div>
+            <form onSubmit={handleSignUp}>
               <h2>Create your account</h2>
               <div className="sub">
                 Get a free verification credit — no card required.
@@ -123,24 +260,53 @@ function AuthForm() {
 
               <div className="field">
                 <label>FULL NAME</label>
-                <input type="text" placeholder="Oluwatimilehin Adebayo" />
+                <input
+                  type="text"
+                  placeholder="Oluwatimilehin Adebayo"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
               </div>
               <div className="field">
                 <label>EMAIL</label>
-                <input type="email" placeholder="you@company.com" />
+                <input
+                  type="email"
+                  placeholder="you@company.com"
+                  value={signUpEmail}
+                  onChange={(e) => setSignUpEmail(e.target.value)}
+                  required
+                />
               </div>
               <div className="field">
                 <label>PASSWORD</label>
-                <input type="password" placeholder="At least 8 characters" />
+                <input
+                  type="password"
+                  placeholder="At least 8 characters"
+                  value={signUpPassword}
+                  onChange={(e) => setSignUpPassword(e.target.value)}
+                  minLength={8}
+                  required
+                />
               </div>
               <div className="row-between" style={{ marginBottom: "20px" }}>
                 <label className="remember">
-                  <input type="checkbox" style={{ accentColor: "var(--blue)" }} />
+                  <input
+                    type="checkbox"
+                    style={{ accentColor: "var(--blue)" }}
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
                   I agree to the terms and acceptable use policy
                 </label>
               </div>
-              <button className="btn btn-primary btn-lg" style={{ width: "100%" }}>
-                Create account →
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary btn-lg"
+                style={{ width: "100%", opacity: loading ? 0.7 : 1 }}
+              >
+                {loading ? "Creating account…" : "Create account →"}
               </button>
 
               <div className="switch-line" style={{ marginTop: "24px" }}>
@@ -149,12 +315,13 @@ function AuthForm() {
                   onClick={(e) => {
                     e.preventDefault();
                     setMode("signin");
+                    setError("");
                   }}
                 >
                   Sign in
                 </a>
               </div>
-            </div>
+            </form>
           )}
 
           <div className="terms">
