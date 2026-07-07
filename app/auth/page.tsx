@@ -1,5 +1,9 @@
 "use client";
 
+// This page is a pure client-side auth form — skip static prerendering at
+// build time so Firebase never initializes on the server without env vars.
+export const dynamic = "force-dynamic";
+
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquareCode } from "lucide-react";
@@ -93,16 +97,22 @@ function AuthForm() {
         signUpPassword
       );
       await updateProfile(cred.user, { displayName: fullName });
-      await setDoc(doc(db, "users", cred.user.uid), {
+
+      // Navigate immediately — the account already exists and the user is
+      // signed in. Don't make them wait on the Firestore write, and don't
+      // let a slow/failed write strand them on this screen.
+      router.push("/dashboard");
+
+      setDoc(doc(db, "users", cred.user.uid), {
         fullName,
         email: signUpEmail,
         walletBalance: 0,
         createdAt: serverTimestamp(),
+      }).catch((err) => {
+        console.error("Failed to create user profile doc:", err);
       });
-      router.push("/dashboard");
     } catch (err: any) {
       setError(friendlyError(err?.code));
-    } finally {
       setLoading(false);
     }
   }
