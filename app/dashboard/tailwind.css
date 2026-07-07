@@ -1,3 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 setup.
+   We only import the theme + utility layers — NOT preflight — so Tailwind's
+   base reset can't leak into or clash with the existing globals.css used by
+   the landing + auth pages. Content (which files to scan) is auto-detected
+   by Tailwind v4, no config file needed for that. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-ink: #0A0F1C;
+  --color-ink-2: #121A2B;
+  --color-ink-3: #1B2540;
+  --color-ink-4: #26314e;
+  --color-blue: #3D8FFF;
+  --color-blue-dim: #1c3a66;
+  --color-teal: #45D9B8;
+  --color-paper: #EDEFF5;
+  --color-paper-dim: #8791A8;
+  --color-danger: #FF5C5C;
+
+  --font-sans: Inter, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius-xl2: 14px;
+}
