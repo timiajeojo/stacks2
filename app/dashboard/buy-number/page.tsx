@@ -42,6 +42,7 @@ export default function BuyNumberPage() {
   const [step, setStep] = useState<Step>("select");
 
   const [usaService, setUsaService] = useState("");
+  const [usaPortal, setUsaPortal] = useState(1);
   const [allCountry, setAllCountry] = useState("");
   const [allService, setAllService] = useState("");
   const [selectedTier, setSelectedTier] = useState(1);
@@ -158,9 +159,24 @@ export default function BuyNumberPage() {
           {/* STEP 2: USA verification flow */}
           <div className={`step ${step === "usa" ? "active" : ""}`}>
             <div className="portal-grid">
-              <div className="portal-tab active">Portal 1</div>
-              <div className="portal-tab">Portal 2</div>
-              <div className="portal-tab">Portal 3</div>
+              <div
+                className={`portal-tab ${usaPortal === 1 ? "active" : ""}`}
+                onClick={() => setUsaPortal(1)}
+              >
+                Portal 1
+              </div>
+              <div
+                className={`portal-tab ${usaPortal === 2 ? "active" : ""}`}
+                onClick={() => setUsaPortal(2)}
+              >
+                Portal 2
+              </div>
+              <div
+                className={`portal-tab ${usaPortal === 3 ? "active" : ""}`}
+                onClick={() => setUsaPortal(3)}
+              >
+                Portal 3
+              </div>
             </div>
 
             <div className="flow-box">
@@ -173,6 +189,7 @@ export default function BuyNumberPage() {
                 </button>
                 <div>
                   <div className="flow-title">USA Verification</div>
+                  <div className="flow-sub">Portal {usaPortal}</div>
                 </div>
               </div>
 
