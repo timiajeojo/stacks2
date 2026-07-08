@@ -380,3 +380,82 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 .drawer-user .left{display:flex; align-items:center; gap:10px;}
 .avatar{width:32px; height:32px; border-radius:50%; background:var(--ink-4); display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
 .drawer-user .name{font-size:14px; font-weight:500;}
+
+
+/* BUY NUMBER FLOW */
+.step{display:none;}
+.step.active{display:block;}
+
+.opt-card{background:var(--ink-2); border:1px solid var(--ink-3); border-radius:16px; padding:22px; margin-bottom:16px;}
+.opt-head{display:flex; align-items:flex-start; gap:14px; margin-bottom:16px;}
+.opt-icon{width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0;}
+.opt-icon.usa{background:rgba(69,217,184,0.14); color:var(--teal);}
+.opt-icon.all{background:rgba(61,143,255,0.14); color:var(--blue);}
+.opt-title{font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:600;}
+.opt-sub{font-size:12.5px; color:var(--paper-dim); margin-top:3px;}
+.opt-desc{font-size:13.5px; color:var(--paper-dim); line-height:1.5; margin-bottom:20px;}
+.btn-start{
+  width:100%; background:var(--blue); color:#04101f; border:none; padding:14px; border-radius:11px;
+  font-size:14.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+}
+
+.pro-tip{
+  display:flex; align-items:flex-start; gap:12px; border:1px solid #2a4a8a; background:rgba(61,143,255,0.05);
+  border-radius:14px; padding:16px; margin-bottom:8px;
+}
+.pro-tip .em{font-size:18px;}
+.pro-tip p{font-size:13px; color:var(--paper); line-height:1.5;}
+.pro-tip b{color:var(--blue);}
+
+.portal-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;}
+.portal-tab{
+  border:1px solid var(--ink-3); border-radius:12px; padding:16px 8px; text-align:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; color:var(--paper); background:var(--ink-2);
+}
+.portal-tab.active{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue); color:var(--blue);}
+
+.flow-box{background:var(--ink-2); border:1px solid var(--ink-3); border-radius:16px; padding:22px;}
+.flow-head{display:flex; align-items:center; gap:12px; margin-bottom:22px;}
+.back-btn{width:32px; height:32px; border-radius:9px; background:var(--ink); border:1px solid var(--ink-4); color:var(--paper); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer;}
+.flow-title{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;}
+.flow-sub{font-size:12.5px; color:var(--paper-dim); margin-top:2px;}
+
+/* Scoped to .flow-box so this doesn't touch the auth page's .field styling */
+.flow-box .field{margin-bottom:18px;}
+.flow-box .field label{display:block; font-size:13.5px; color:var(--paper); margin-bottom:8px; font-weight:500;}
+.flow-box .field select{
+  width:100%; background:var(--ink); border:1px solid var(--ink-4); border-radius:10px; padding:13px 14px;
+  color:var(--paper); font-size:14px; appearance:none; font-family:'Inter',sans-serif;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238791A8' stroke-width='1.5' fill='none'/></svg>");
+  background-repeat:no-repeat; background-position:right 14px center;
+}
+.flow-box .field select:invalid{color:var(--paper-dim);}
+
+.price-box{display:none; border:1px solid var(--blue); border-radius:12px; padding:16px; margin-bottom:18px;}
+.price-box.show{display:flex; justify-content:space-between;}
+.price-box .lbl{font-size:11px; color:var(--paper-dim); letter-spacing:0.05em; margin-bottom:8px;}
+.price-box .cost{font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:var(--teal);}
+.price-box .right{text-align:right;}
+.price-box .status{font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600;}
+
+.tier-section{display:none; margin-bottom:18px;}
+.tier-section.show{display:block;}
+.tier-section > label{display:block; font-size:13.5px; color:var(--paper); margin-bottom:10px; font-weight:500;}
+.tier-list{display:flex; flex-direction:column; gap:10px;}
+.tier-card{border:1px solid var(--ink-4); border-radius:12px; padding:14px 16px; cursor:pointer;}
+.tier-card.selected{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue);}
+.tier-top{display:flex; justify-content:space-between; margin-bottom:10px;}
+.tier-top .lbl{font-size:11px; color:var(--paper-dim); letter-spacing:0.05em; margin-bottom:6px;}
+.tier-top .price{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700;}
+.tier-top .stock{font-size:12.5px; color:var(--paper-dim); text-align:right;}
+.tier-bottom{display:flex; justify-content:space-between; border-top:1px solid var(--ink-3); padding-top:10px; font-size:13px;}
+.tier-bottom .name{color:var(--paper-dim);}
+.tier-bottom .state{color:var(--paper-dim); font-weight:500;}
+.tier-card.selected .tier-bottom .state{color:var(--blue);}
+
+.btn-purchase{
+  width:100%; background:var(--ink-4); color:var(--paper-dim); border:none; padding:14px; border-radius:11px;
+  font-size:14.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:all .15s ease; cursor:pointer;
+}
+.btn-purchase.enabled{background:var(--blue); color:#04101f;}
