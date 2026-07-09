@@ -102,6 +102,8 @@ export default function VerificationsPage() {
   const [copiedNumberId, setCopiedNumberId] = useState<string | null>(null);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const rentalListRef = useRef<HTMLDivElement>(null);
+  const filterRowRef = useRef<HTMLDivElement>(null);
 
   // Derived from the numbers the user has actually purchased — once real
   // data is wired up this will reflect their real rentals automatically.
@@ -123,10 +125,18 @@ export default function VerificationsPage() {
   }
 
   useEffect(() => {
-    function handleOutsideClick() {
-      setOpenPopoverId(null);
-      setStatusOpen(false);
-      setServiceOpen(false);
+    function handleOutsideClick(e: MouseEvent) {
+      const target = e.target as Node;
+      // Only close if the click genuinely landed outside these containers —
+      // fixes a bug where every click (including the one that opened a
+      // popover/dropdown) was immediately closing it again.
+      if (rentalListRef.current && !rentalListRef.current.contains(target)) {
+        setOpenPopoverId(null);
+      }
+      if (filterRowRef.current && !filterRowRef.current.contains(target)) {
+        setStatusOpen(false);
+        setServiceOpen(false);
+      }
     }
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
@@ -205,7 +215,7 @@ export default function VerificationsPage() {
             <Search size={14} />
             Search by number, service, or country…
           </div>
-          <div className="filter-row">
+          <div className="filter-row" ref={filterRowRef}>
             <div className="filter-wrap">
               <div
                 className="filter-select"
@@ -301,7 +311,7 @@ export default function VerificationsPage() {
             </div>
           )}
 
-          <div className="rental-list">
+          <div className="rental-list" ref={rentalListRef}>
             {rentals.map((r) => (
               <div className="rental-card" key={r.id}>
                 <div className="rc-top">
