@@ -537,3 +537,59 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 
 .sms-pop .code{cursor:pointer;}
 .copied-note{color:var(--teal) !important;}
+
+/* WALLET / DEPOSITS PAGE */
+.balance-hero{
+  background:linear-gradient(155deg, #0d3d33 0%, #0f6b53 55%, var(--teal) 140%);
+  border-radius:18px; padding:24px; margin-bottom:16px; position:relative; overflow:hidden;
+}
+.balance-hero::after{
+  content:''; position:absolute; width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,0.10), transparent 70%);
+  top:-90px; right:-70px;
+}
+.bh-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; position:relative; z-index:1;}
+.bh-top .lbl{font-size:13.5px; color:#c9f5ea;}
+.bh-icon{width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,0.16); display:flex; align-items:center; justify-content:center;}
+.bh-amount{font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; margin-bottom:6px; position:relative; z-index:1;}
+.bh-caption{font-size:12.5px; color:#c9f5ea; margin-bottom:20px; position:relative; z-index:1;}
+.bh-actions{display:flex; flex-direction:column; gap:10px; position:relative; z-index:1;}
+.btn-topup{
+  width:100%; background:var(--paper); color:#0a2b22; border:none; padding:14px; border-radius:11px;
+  font-size:14.5px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+}
+.btn-autofund{
+  width:100%; background:rgba(255,255,255,0.14); color:var(--paper); border:1px solid rgba(255,255,255,0.25);
+  padding:13px; border-radius:11px; font-size:14px; font-weight:600; cursor:pointer;
+}
+
+.recap-card{background:var(--ink-2); border:1px solid var(--ink-3); border-radius:14px; padding:20px; margin-bottom:22px;}
+.recap-card .lbl{font-size:13px; color:var(--paper-dim); margin-bottom:8px;}
+.recap-card .amount{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; color:var(--blue); margin-bottom:6px;}
+.recap-card .caption{font-size:12.5px; color:var(--paper-dim);}
+
+.tx-list{display:flex; flex-direction:column; gap:12px;}
+.tx-card{background:var(--ink-2); border:1px solid var(--ink-3); border-radius:14px; padding:16px;}
+.tx-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.tx-top-left{display:flex; align-items:center; gap:10px;}
+.tx-icon{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.tx-icon.credit{background:rgba(69,217,184,0.14); color:var(--teal);}
+.tx-icon.debit{background:rgba(255,92,92,0.14); color:var(--danger);}
+.tx-type{font-size:14.5px; font-weight:600;}
+.status-pill{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:100px; font-size:11px; font-weight:500; margin-left:8px;}
+.status-pill.ok{background:rgba(69,217,184,0.1); color:var(--teal);}
+.status-pill.pending{background:rgba(255,176,32,0.1); color:#e6b93d;}
+.status-pill .d{width:5px; height:5px; border-radius:50%; background:currentColor;}
+.tx-top-right{display:flex; align-items:center; gap:10px;}
+.comp-pill{
+  display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:100px; font-size:11.5px;
+  font-weight:500; background:rgba(69,217,184,0.1); color:var(--teal); border:1px solid rgba(69,217,184,0.25);
+}
+.trash-btn{color:var(--danger); background:none; border:none; display:flex; align-items:center; cursor:pointer;}
+.tx-meta-row{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--paper-dim); margin-bottom:12px;}
+.tx-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.tx-grid .lbl{font-size:11.5px; color:var(--paper-dim); margin-bottom:4px;}
+.tx-grid .val{font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600;}
+.tx-grid .val.pos{color:var(--teal);}
+.tx-grid .val.neg{color:var(--danger);}
+.tx-grid .val.date{font-family:'Inter',sans-serif; font-weight:500; color:var(--paper); font-size:13px;}
