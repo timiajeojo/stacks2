@@ -593,3 +593,72 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 .tx-grid .val.pos{color:var(--teal);}
 .tx-grid .val.neg{color:var(--danger);}
 .tx-grid .val.date{font-family:'Inter',sans-serif; font-weight:500; color:var(--paper); font-size:13px;}
+
+/* RENTALS PAGE */
+.filter-chip-row{display:flex; gap:10px; margin-bottom:10px; position:relative;}
+.filter-chip{
+  display:flex; align-items:center; gap:8px; border:1px dashed var(--ink-4); border-radius:9px;
+  padding:11px 14px; font-size:13.5px; color:var(--paper); background:transparent; cursor:pointer;
+}
+
+.status-filter-panel{
+  position:absolute; top:calc(100% + 8px); left:0; width:280px; max-width:88vw; z-index:40;
+  background:var(--ink-2); border:1px solid var(--ink-3); border-radius:12px; overflow:hidden;
+  box-shadow:0 20px 40px -12px rgba(0,0,0,0.6);
+}
+.status-filter-search{
+  display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--ink-3);
+  color:var(--paper-dim);
+}
+.status-filter-search input{
+  background:none; border:none; outline:none; color:var(--paper); font-size:13.5px; width:100%; font-family:'Inter',sans-serif;
+}
+.status-filter-search input::placeholder{color:var(--paper-dim);}
+.status-filter-list{max-height:260px; overflow-y:auto;}
+.status-filter-item{display:flex; align-items:center; gap:10px; padding:11px 14px; font-size:13.5px; color:var(--paper); cursor:pointer;}
+.status-filter-item:hover{background:var(--ink-3);}
+.status-filter-item .chk{
+  width:16px; height:16px; border-radius:4px; border:1.5px solid var(--ink-4); display:flex;
+  align-items:center; justify-content:center; flex-shrink:0; color:transparent;
+}
+.status-filter-item .chk.checked{background:var(--blue); border-color:var(--blue); color:#04101f;}
+.status-filter-footer{display:flex; justify-content:flex-end; padding:10px 14px; border-top:1px solid var(--ink-3);}
+.status-filter-footer button{
+  width:32px; height:32px; border-radius:8px; background:var(--ink); border:1px solid var(--ink-4); color:var(--paper);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* TABLE */
+.table-wrap{border:1px solid var(--ink-3); border-radius:12px; overflow:visible; margin-bottom:16px;}
+.tbl-scroll{overflow-x:auto; border-radius:12px;}
+table{width:100%; border-collapse:collapse; min-width:560px;}
+thead th{
+  text-align:left; font-size:12px; color:var(--paper); font-weight:600; padding:14px 16px;
+  border-bottom:1px solid var(--ink-3); background:var(--ink-2); white-space:nowrap; position:relative;
+}
+.th-sortable{display:flex; align-items:center; gap:4px; cursor:pointer;}
+.th-sortable .chev{color:var(--paper-dim);}
+tbody td{padding:44px 16px; font-size:13px; color:var(--paper-dim); text-align:right;}
+.scrollbar{height:4px; background:var(--ink-3); border-radius:2px; margin:0 0 18px;}
+.scrollbar i{display:block; width:55%; height:100%; background:var(--paper-dim); border-radius:2px;}
+
+.col-menu{
+  position:absolute; top:calc(100% + 6px); left:0; width:130px; z-index:50; background:var(--ink-2);
+  border:1px solid var(--ink-3); border-radius:10px; overflow:hidden; box-shadow:0 20px 40px -12px rgba(0,0,0,0.6);
+}
+.col-menu-item{display:flex; align-items:center; gap:8px; padding:10px 12px; font-size:13px; color:var(--paper); cursor:pointer; font-weight:400;}
+.col-menu-item:hover{background:var(--ink-3);}
+
+/* PAGINATION */
+.pagination{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.page-size{
+  display:flex; align-items:center; gap:8px; border:1px solid var(--ink-3); border-radius:9px;
+  padding:9px 12px; font-size:13px; color:var(--paper); background:var(--ink-2); cursor:pointer;
+}
+.page-info{font-size:13px; color:var(--paper-dim);}
+.page-nav{display:flex; gap:8px;}
+.page-nav button{
+  width:34px; height:34px; border-radius:9px; border:1px solid var(--ink-3); background:var(--ink-2);
+  color:var(--paper-dim); display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.page-nav button:disabled{opacity:0.4; cursor:default;}
