@@ -518,3 +518,22 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 .rc-footer{border-top:1px solid var(--ink-3); padding-top:12px;}
 .rc-footer .lbl{font-size:11.5px; color:var(--paper-dim); margin-bottom:3px;}
 .rc-footer .val{font-size:13.5px; font-weight:500;}
+
+.filter-wrap{position:relative;}
+.filter-menu{
+  position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:30;
+  background:var(--ink-2); border:1px solid var(--ink-3); border-radius:10px;
+  overflow:hidden; box-shadow:0 20px 40px -12px rgba(0,0,0,0.6);
+}
+.filter-menu-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 14px; font-size:13.5px; color:var(--paper-dim); cursor:pointer;
+}
+.filter-menu-item:hover{background:var(--ink-3);}
+.filter-menu-item .left{display:flex; align-items:center; gap:10px;}
+.filter-menu-item.selected{color:var(--paper);}
+.filter-menu-item.selected .left{color:var(--paper);}
+.filter-menu-item .check{color:var(--blue);}
+
+.sms-pop .code{cursor:pointer;}
+.copied-note{color:var(--teal) !important;}

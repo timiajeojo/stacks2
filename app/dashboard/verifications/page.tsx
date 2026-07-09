@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -7,10 +7,15 @@ import {
   Search,
   Mail,
   Copy,
+  Check,
   Timer,
+  Circle,
+  CheckCircle2,
+  Info,
+  AlertTriangle,
+  XCircle,
   LayoutGrid,
   ArrowDownToLine,
-  CheckCircle2,
   Package,
   X,
   Send,
@@ -76,15 +81,52 @@ const rentals: Rental[] = [
   },
 ];
 
+const statusOptions = [
+  { value: "all", label: "All Status", icon: null },
+  { value: "created", label: "Created", icon: Circle },
+  { value: "pending", label: "Pending", icon: Timer },
+  { value: "active", label: "Active", icon: CheckCircle2 },
+  { value: "inactive", label: "Inactive", icon: Info },
+  { value: "expired", label: "Expired", icon: AlertTriangle },
+  { value: "cancelled", label: "Cancelled", icon: XCircle },
+];
+
 export default function VerificationsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [communityDismissed, setCommunityDismissed] = useState(false);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [serviceFilter, setServiceFilter] = useState("all");
+  const [copiedNumberId, setCopiedNumberId] = useState<string | null>(null);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Derived from the numbers the user has actually purchased — once real
+  // data is wired up this will reflect their real rentals automatically.
+  const serviceOptions = [
+    "all",
+    ...Array.from(new Set(rentals.map((r) => r.service))),
+  ];
+
+  function copyNumber(id: string, number: string) {
+    navigator.clipboard.writeText(number).catch(() => {});
+    setCopiedNumberId(id);
+    setTimeout(() => setCopiedNumberId(null), 1500);
+  }
+
+  function copyCode(id: string, code: string) {
+    navigator.clipboard.writeText(code.replace(/\s/g, "")).catch(() => {});
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 1500);
+  }
 
   useEffect(() => {
     function handleOutsideClick() {
       setOpenPopoverId(null);
+      setStatusOpen(false);
+      setServiceOpen(false);
     }
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
@@ -164,11 +206,79 @@ export default function VerificationsPage() {
             Search by number, service, or country…
           </div>
           <div className="filter-row">
-            <div className="filter-select">
-              All Status <ChevronDown className="chev" size={14} />
+            <div className="filter-wrap">
+              <div
+                className="filter-select"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setServiceOpen(false);
+                  setStatusOpen((v) => !v);
+                }}
+              >
+                {statusOptions.find((s) => s.value === statusFilter)?.label}
+                <ChevronDown className="chev" size={14} />
+              </div>
+              {statusOpen && (
+                <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
+                  {statusOptions.map((opt) => (
+                    <div
+                      key={opt.value}
+                      className={`filter-menu-item ${
+                        statusFilter === opt.value ? "selected" : ""
+                      }`}
+                      onClick={() => {
+                        setStatusFilter(opt.value);
+                        setStatusOpen(false);
+                      }}
+                    >
+                      <div className="left">
+                        {opt.icon && <opt.icon size={15} />}
+                        {opt.label}
+                      </div>
+                      {statusFilter === opt.value && (
+                        <Check size={14} className="check" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="filter-select">
-              All Services <ChevronDown className="chev" size={14} />
+
+            <div className="filter-wrap">
+              <div
+                className="filter-select"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatusOpen(false);
+                  setServiceOpen((v) => !v);
+                }}
+              >
+                {serviceFilter === "all" ? "All Services" : serviceFilter}
+                <ChevronDown className="chev" size={14} />
+              </div>
+              {serviceOpen && (
+                <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
+                  {serviceOptions.map((service) => (
+                    <div
+                      key={service}
+                      className={`filter-menu-item ${
+                        serviceFilter === service ? "selected" : ""
+                      }`}
+                      onClick={() => {
+                        setServiceFilter(service);
+                        setServiceOpen(false);
+                      }}
+                    >
+                      <div className="left">
+                        {service === "all" ? "All Services" : service}
+                      </div>
+                      {serviceFilter === service && (
+                        <Check size={14} className="check" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -217,8 +327,24 @@ export default function VerificationsPage() {
                           {r.message ? (
                             <>
                               <div className="lbl">MESSAGE RECEIVED</div>
-                              <div className="code">{r.message.code}</div>
-                              <div className="time">{r.message.time}</div>
+                              <div
+                                className="code"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyCode(r.id, r.message!.code);
+                                }}
+                              >
+                                {r.message.code}
+                              </div>
+                              <div
+                                className={`time ${
+                                  copiedCodeId === r.id ? "copied-note" : ""
+                                }`}
+                              >
+                                {copiedCodeId === r.id
+                                  ? "Copied to clipboard ✓"
+                                  : r.message.time}
+                              </div>
                             </>
                           ) : (
                             <>
@@ -231,8 +357,18 @@ export default function VerificationsPage() {
                         </div>
                       )}
                     </button>
-                    <button className="icon-sq">
-                      <Copy size={14} />
+                    <button
+                      className="icon-sq"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyNumber(r.id, r.number);
+                      }}
+                    >
+                      {copiedNumberId === r.id ? (
+                        <Check size={14} color="var(--teal)" />
+                      ) : (
+                        <Copy size={14} />
+                      )}
                     </button>
                   </div>
                 </div>
