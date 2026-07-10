@@ -662,3 +662,51 @@ tbody td{padding:44px 16px; font-size:13px; color:var(--paper-dim); text-align:r
   color:var(--paper-dim); display:flex; align-items:center; justify-content:center; cursor:pointer;
 }
 .page-nav button:disabled{opacity:0.4; cursor:default;}
+
+
+/* LIGHT THEME — core surfaces/text/borders adapt via these variables.
+   Note: a few hardcoded gradients (e.g. the wallet card) won't adapt yet. */
+html[data-theme='light']{
+  --ink:#F4F6FB;
+  --ink-2:#FFFFFF;
+  --ink-3:#E3E7F0;
+  --ink-4:#CBD3E3;
+  --blue:#2F6FE0;
+  --blue-dim:#DCE8FF;
+  --teal:#0E9E82;
+  --paper:#111726;
+  --paper-dim:#5B6478;
+  --danger:#D93636;
+}
+
+/* PROFILE / SETTINGS PAGE */
+.settings-nav{display:flex; flex-direction:column; gap:2px; margin-bottom:20px;}
+.settings-nav-item{padding:13px 16px; border-radius:10px; font-size:14.5px; font-weight:500; color:var(--paper); cursor:pointer;}
+.settings-nav-item.active{background:var(--ink-2);}
+.settings-nav-item:not(.active):hover{background:rgba(255,255,255,0.03);}
+
+.divider{height:1px; background:var(--ink-3); margin:20px 0;}
+
+.settings-section-head{margin-bottom:16px;}
+.settings-section-head h2{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600; margin-bottom:4px;}
+.settings-section-head p{font-size:13px; color:var(--paper-dim); line-height:1.5;}
+
+.settings-card{margin-bottom:20px;}
+.settings-card .field{margin-bottom:16px;}
+.settings-card .field label{display:block; font-size:13.5px; color:var(--paper); margin-bottom:8px; font-weight:500;}
+.settings-card .field input{
+  width:100%; background:var(--ink); border:1px solid var(--ink-4); border-radius:10px; padding:13px 14px;
+  color:var(--paper); font-size:14px; font-family:'Inter',sans-serif;
+}
+.settings-card .field input:focus{outline:2px solid var(--blue); outline-offset:1px; border-color:var(--blue);}
+.settings-card .field input::placeholder{color:#54607d;}
+
+.danger-box{border:1px solid rgba(255,92,92,0.35); background:rgba(255,92,92,0.06); border-radius:14px; padding:18px;}
+.danger-box h4{color:var(--danger); font-size:14.5px; font-weight:600; margin-bottom:4px;}
+.danger-box p{font-size:13px; color:var(--paper-dim); margin-bottom:14px; line-height:1.5;}
+.btn-danger{background:var(--danger); color:#2a0505; border:none; padding:12px 18px; border-radius:10px; font-size:13.5px; font-weight:600; width:100%; cursor:pointer;}
+.btn-danger-outline{background:transparent; color:var(--paper-dim); border:1px solid var(--ink-4); padding:12px 18px; border-radius:10px; font-size:13.5px; font-weight:500; width:100%; cursor:pointer; margin-top:10px;}
+
+.appearance-row{display:inline-flex; gap:4px; background:var(--ink-2); border:1px solid var(--ink-3); border-radius:11px; padding:4px;}
+.appearance-btn{display:flex; align-items:center; gap:7px; padding:10px 16px; border-radius:8px; font-size:13.5px; color:var(--paper-dim); background:transparent; border:none; cursor:pointer;}
+.appearance-btn.active{background:var(--ink-3); color:var(--paper);}
