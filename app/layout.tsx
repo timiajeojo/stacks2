@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import ThemeInit from "./components/ThemeInit";
 
 export const metadata: Metadata = {
   title: "stacksnumber — numbers on demand for verification",
@@ -14,7 +15,29 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        {/* Runs before paint to avoid a flash of the wrong theme on load.
+            ThemeInit (in body) still handles live system-theme changes. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme') || 'system';
+                  var resolved = theme === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : theme;
+                  document.documentElement.setAttribute('data-theme', resolved);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body>
+        <ThemeInit />
+        {children}
+      </body>
     </html>
   );
 }
