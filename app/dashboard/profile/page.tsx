@@ -61,7 +61,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("profile");
-  const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
   // Profile fields
@@ -113,7 +112,6 @@ export default function ProfilePage() {
       } catch {
         // Non-fatal — profile still usable with just Auth data
       }
-      setAuthChecked(true);
     });
     return () => unsub();
   }, [router]);
@@ -199,23 +197,6 @@ export default function ProfilePage() {
     } finally {
       setDeleteLoading(false);
     }
-  }
-
-  if (!authChecked) {
-    return (
-      <div
-        className="dashboard-app"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          color: "var(--paper-dim)",
-        }}
-      >
-        Loading…
-      </div>
-    );
   }
 
   return (
