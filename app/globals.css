@@ -11,6 +11,7 @@
   --paper:#EDEFF5;
   --paper-dim:#8791A8;
   --danger:#FF5C5C;
+  --header-bg:rgba(10,15,28,0.85);
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
@@ -33,7 +34,7 @@ a{color:inherit; text-decoration:none;}
 /* HEADER */
 header{
   position:sticky; top:0; z-index:50;
-  background:rgba(10,15,28,0.85);
+  background:var(--header-bg);
   backdrop-filter:blur(10px);
   border-bottom:1px solid var(--ink-3);
 }
@@ -381,7 +382,6 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 .avatar{width:32px; height:32px; border-radius:50%; background:var(--ink-4); display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; font-family:'Space Grotesk',sans-serif;}
 .drawer-user .name{font-size:14px; font-weight:500;}
 
-
 /* BUY NUMBER FLOW */
 .step{display:none;}
 .step.active{display:block;}
@@ -411,6 +411,7 @@ footer{border-top:1px solid var(--ink-3); padding:56px 0 32px;}
 .portal-tab{
   border:1px solid var(--ink-3); border-radius:12px; padding:16px 8px; text-align:center;
   font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px; color:var(--paper); background:var(--ink-2);
+  cursor:pointer;
 }
 .portal-tab.active{border-color:var(--blue); box-shadow:0 0 0 1px var(--blue); color:var(--blue);}
 
@@ -663,7 +664,6 @@ tbody td{padding:44px 16px; font-size:13px; color:var(--paper-dim); text-align:r
 }
 .page-nav button:disabled{opacity:0.4; cursor:default;}
 
-
 /* LIGHT THEME — core surfaces/text/borders adapt via these variables.
    Note: a few hardcoded gradients (e.g. the wallet card) won't adapt yet. */
 html[data-theme='light']{
@@ -677,6 +677,7 @@ html[data-theme='light']{
   --paper:#111726;
   --paper-dim:#5B6478;
   --danger:#D93636;
+  --header-bg:rgba(244,246,251,0.85);
 }
 
 /* PROFILE / SETTINGS PAGE */
