@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MessageSquareCode } from "lucide-react";
+import { Eye, EyeOff, MessageSquareCode } from "lucide-react";
 import {
   browserLocalPersistence,
   browserSessionPersistence,
@@ -51,12 +51,14 @@ function AuthForm() {
   const [signInEmail, setSignInEmail] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
 
   // Sign up fields
   const [fullName, setFullName] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("mode") === "signup") setMode("signup");
@@ -217,13 +219,42 @@ function AuthForm() {
               </div>
               <div className="field">
                 <label>PASSWORD</label>
-                <input
-                  type="password"
-                  placeholder="••••••••••"
-                  value={signInPassword}
-                  onChange={(e) => setSignInPassword(e.target.value)}
-                  required
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showSignInPassword ? "text" : "password"}
+                    placeholder="••••••••••"
+                    value={signInPassword}
+                    onChange={(e) => setSignInPassword(e.target.value)}
+                    required
+                    style={{ paddingRight: "42px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignInPassword((v) => !v)}
+                    aria-label={
+                      showSignInPassword ? "Hide password" : "Show password"
+                    }
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      color: "var(--paper-dim)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showSignInPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="row-between">
                 <label className="remember">
@@ -290,14 +321,43 @@ function AuthForm() {
               </div>
               <div className="field">
                 <label>PASSWORD</label>
-                <input
-                  type="password"
-                  placeholder="At least 8 characters"
-                  value={signUpPassword}
-                  onChange={(e) => setSignUpPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showSignUpPassword ? "text" : "password"}
+                    placeholder="At least 8 characters"
+                    value={signUpPassword}
+                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    minLength={8}
+                    required
+                    style={{ paddingRight: "42px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSignUpPassword((v) => !v)}
+                    aria-label={
+                      showSignUpPassword ? "Hide password" : "Show password"
+                    }
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      color: "var(--paper-dim)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showSignUpPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="row-between" style={{ marginBottom: "20px" }}>
                 <label className="remember">
