@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Menu,
   X,
@@ -16,6 +17,9 @@ import {
   Send,
   MessageSquareCode,
 } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid, active: true },
@@ -24,9 +28,43 @@ const navItems = [
   { label: "Rentals", href: "/dashboard/rentals", icon: Package },
 ];
 
+function formatNaira(amount: number): string {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [communityDismissed, setCommunityDismissed] = useState(false);
+  const [name, setName] = useState("");
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        router.push("/auth");
+        return;
+      }
+      setName(u.displayName || "");
+      try {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        if (snap.exists()) {
+          const data = snap.data();
+          setBalance(typeof data.walletBalance === "number" ? data.walletBalance : 0);
+          if (!u.displayName && data.fullName) setName(data.fullName);
+        } else {
+          setBalance(0);
+        }
+      } catch {
+        setBalance(0);
+      }
+    });
+    return () => unsub();
+  }, [router]);
 
   return (
     <>
@@ -61,8 +99,8 @@ export default function DashboardPage() {
         <div className="drawer-bottom">
           <div className="drawer-user">
             <div className="left">
-              <div className="avatar">T</div>
-              <div className="name">Timi</div>
+              <div className="avatar">{(name || "T").charAt(0).toUpperCase()}</div>
+              <div className="name">{name || "Account"}</div>
             </div>
             <ChevronDown size={16} color="var(--paper-dim)" />
           </div>
@@ -80,7 +118,7 @@ export default function DashboardPage() {
             </span>
             stacksnumber
           </div>
-          <div className="icon-btn">T</div>
+          <div className="icon-btn">{(name || "T").charAt(0).toUpperCase()}</div>
         </div>
 
         <div className="page-head">
@@ -96,11 +134,12 @@ export default function DashboardPage() {
                 <Wallet size={15} />
               </div>
             </div>
-            <div className="wallet-amount mono">$84.60</div>
-            <div className="wallet-change">
-              <b>+12%</b> from last month
+            <div className="wallet-amount mono">
+              {balance === null ? "—" : formatNaira(balance)}
             </div>
-            <button className="topup-btn">Top Up</button>
+            <a href="/dashboard/deposits" className="topup-btn">
+              Top Up
+            </a>
           </div>
 
           <div className="section-label">
