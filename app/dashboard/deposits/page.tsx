@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Script from "next/script";
 import {
   Menu,
   ChevronDown,
   Search,
   ArrowDown,
   ArrowUp,
-  Trash2,
   Check,
+  X,
   CheckCircle2,
   Circle,
   Timer,
@@ -22,6 +24,23 @@ import {
   Diamond,
   MessageSquareCode,
 } from "lucide-react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import { auth, db } from "../../lib/firebase";
+
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (options: Record<string, any>) => { openIframe: () => void };
+    };
+  }
+}
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -35,17 +54,10 @@ type Tx = {
   kind: "credit" | "debit";
   status: "ok" | "pending";
   method: string;
-  amount: string;
-  date: string;
+  amount: number;
+  createdAt: Date | null;
   completed: boolean;
 };
-
-const initialTx: Tx[] = [
-  { id: "1", kind: "credit", status: "ok", method: "Payment Point", amount: "+$5.20", date: "Wed, 11:28 PM", completed: true },
-  { id: "2", kind: "credit", status: "ok", method: "Payment Point", amount: "+$25.00", date: "Tue, 4:02 PM", completed: true },
-  { id: "3", kind: "debit", status: "ok", method: "Number rental — WhatsApp", amount: "-$0.19", date: "Tue, 11:04 AM", completed: true },
-  { id: "4", kind: "credit", status: "pending", method: "Payment Point", amount: "+$10.00", date: "Mon, 9:41 AM", completed: false },
-];
 
 const statusOptions = [
   { value: "all", label: "All Status", icon: null },
@@ -58,19 +70,46 @@ const statusOptions = [
 
 const paymentOptions = [
   { value: "all", label: "All Payment Methods" },
+  { value: "paystack", label: "Paystack" },
   { value: "drexpay", label: "Drexpay (Bank transfer)" },
   { value: "manual", label: "Manual payment" },
-  { value: "point", label: "Payment Point" },
 ];
 
+function formatNaira(amount: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+function formatDate(d: Date | null) {
+  if (!d) return "Just now";
+  return d.toLocaleString("en-NG", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function DepositsPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [transactions, setTransactions] = useState(initialTx);
   const filterRowRef = useRef<HTMLDivElement>(null);
+
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Tx[]>([]);
+
+  const [paystackReady, setPaystackReady] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState("");
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -84,8 +123,117 @@ export default function DepositsPage() {
     return () => document.removeEventListener("click", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        router.push("/auth");
+        return;
+      }
+      setUser(u);
+    });
+    return () => unsubAuth();
+  }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubBalance = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      setBalance(snap.exists() ? snap.data().walletBalance || 0 : 0);
+    });
+
+    const txQuery = query(
+      collection(db, "users", user.uid, "transactions"),
+      orderBy("createdAt", "desc")
+    );
+    const unsubTx = onSnapshot(txQuery, (snap) => {
+      setTransactions(
+        snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            kind: data.kind,
+            status: data.status,
+            method: data.method,
+            amount: data.amount,
+            completed: data.completed,
+            createdAt: data.createdAt?.toDate?.() || null,
+          };
+        })
+      );
+    });
+
+    return () => {
+      unsubBalance();
+      unsubTx();
+    };
+  }, [user]);
+
+  function openTopUp() {
+    setAmount("");
+    setPayError("");
+    setModalOpen(true);
+  }
+
+  async function handlePay() {
+    if (!user || !user.email) return;
+    const naira = Number(amount);
+    if (!naira || naira < 100) {
+      setPayError("Enter an amount of at least ₦100.");
+      return;
+    }
+    if (!paystackReady || !window.PaystackPop) {
+      setPayError("Payment is still loading — try again in a moment.");
+      return;
+    }
+
+    setPayError("");
+    setPayLoading(true);
+
+    const handler = window.PaystackPop.setup({
+      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      email: user.email,
+      amount: Math.round(naira * 100), // Paystack expects kobo
+      currency: "NGN",
+      callback: (response: { reference: string }) => {
+        (async () => {
+          try {
+            const res = await fetch("/api/paystack/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                reference: response.reference,
+                uid: user.uid,
+              }),
+            });
+            if (!res.ok) throw new Error("Verification failed");
+            setModalOpen(false);
+            // Balance and transaction list update automatically via the
+            // onSnapshot listeners once Firestore is credited.
+          } catch {
+            setPayError(
+              "Payment received but verification failed — contact support with your reference: " +
+                response.reference
+            );
+          } finally {
+            setPayLoading(false);
+          }
+        })();
+      },
+      onClose: () => {
+        setPayLoading(false);
+      },
+    });
+    handler.openIframe();
+  }
+
   return (
     <>
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        strategy="afterInteractive"
+        onLoad={() => setPaystackReady(true)}
+      />
+
       <div
         className={`dashboard-backdrop ${drawerOpen ? "open" : ""}`}
         onClick={() => setDrawerOpen(false)}
@@ -152,17 +300,19 @@ export default function DepositsPage() {
                 <Diamond size={15} />
               </div>
             </div>
-            <div className="bh-amount mono">$84.60</div>
+            <div className="bh-amount mono">{formatNaira(balance)}</div>
             <div className="bh-caption">Available for renting numbers</div>
             <div className="bh-actions">
-              <button className="btn-topup">+ Top Up</button>
+              <button className="btn-topup" onClick={openTopUp}>
+                + Top Up
+              </button>
               <button className="btn-autofund">Automatic Funding</button>
             </div>
           </div>
 
           <div className="recap-card">
             <div className="lbl">Current Balance</div>
-            <div className="amount mono">$84.60</div>
+            <div className="amount mono">{formatNaira(balance)}</div>
             <div className="caption">Available for renting numbers</div>
           </div>
 
@@ -250,6 +400,18 @@ export default function DepositsPage() {
           </div>
 
           <div className="tx-list">
+            {transactions.length === 0 && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: "var(--paper-dim)",
+                  fontSize: "13.5px",
+                  padding: "24px 0",
+                }}
+              >
+                No transactions yet.
+              </div>
+            )}
             {transactions.map((tx) => (
               <div className="tx-card" key={tx.id}>
                 <div className="tx-top">
@@ -275,16 +437,6 @@ export default function DepositsPage() {
                         <Check size={11} /> Completed
                       </span>
                     )}
-                    <button
-                      className="trash-btn"
-                      onClick={() =>
-                        setTransactions((prev) =>
-                          prev.filter((t) => t.id !== tx.id)
-                        )
-                      }
-                    >
-                      <Trash2 size={15} />
-                    </button>
                   </div>
                 </div>
                 <div className="tx-meta-row">
@@ -300,21 +452,84 @@ export default function DepositsPage() {
                     <div className="lbl">Amount</div>
                     <div
                       className={`val mono ${
-                        tx.amount.startsWith("+") ? "pos" : "neg"
+                        tx.kind === "credit" ? "pos" : "neg"
                       }`}
                     >
-                      {tx.amount}
+                      {tx.kind === "credit" ? "+" : "-"}
+                      {formatNaira(tx.amount)}
                     </div>
                   </div>
                   <div>
                     <div className="lbl">Date</div>
-                    <div className="val date">{tx.date}</div>
+                    <div className="val date">{formatDate(tx.createdAt)}</div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </main>
+      </div>
+
+      <div
+        className={`topup-modal-backdrop ${modalOpen ? "open" : ""}`}
+        onClick={() => !payLoading && setModalOpen(false)}
+      />
+      <div className={`topup-modal ${modalOpen ? "open" : ""}`}>
+        <button
+          className="topup-modal-close"
+          onClick={() => !payLoading && setModalOpen(false)}
+        >
+          <X size={15} />
+        </button>
+        <h3>Top Up Wallet</h3>
+        <div className="sub">Fund your wallet securely via Paystack.</div>
+
+        {payError && (
+          <div
+            style={{
+              background: "rgba(255,92,92,0.1)",
+              border: "1px solid rgba(255,92,92,0.35)",
+              color: "#ff9b9b",
+              fontSize: "12.5px",
+              borderRadius: "9px",
+              padding: "10px 14px",
+              marginBottom: "16px",
+            }}
+          >
+            {payError}
+          </div>
+        )}
+
+        <div className="field">
+          <label>Amount</label>
+          <div className="amount-input">
+            <span>₦</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="topup-quick">
+          {[1000, 5000, 10000, 20000].map((v) => (
+            <button key={v} onClick={() => setAmount(String(v))}>
+              ₦{v.toLocaleString()}
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="btn btn-primary btn-lg"
+          style={{ width: "100%" }}
+          onClick={handlePay}
+          disabled={payLoading}
+        >
+          {payLoading ? "Processing…" : "Proceed to Pay"}
+        </button>
       </div>
     </>
   );
