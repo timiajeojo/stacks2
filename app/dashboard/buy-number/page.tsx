@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ShoppingCart,
-  Globe,
   LayoutGrid,
   ArrowDownToLine,
   CheckCircle2,
@@ -21,34 +20,23 @@ const navItems = [
   { label: "Rentals", href: "/dashboard/rentals", icon: Package },
 ];
 
-const usaPrices: Record<string, { cost: string; status: string }> = {
-  whatsapp: { cost: "$1.92", status: "High" },
-  telegram: { cost: "$1.50", status: "Medium" },
-  google: { cost: "$2.10", status: "High" },
-  instagram: { cost: "$1.75", status: "Medium" },
-  discord: { cost: "$1.40", status: "Low" },
-};
-
+// Placeholder — will be replaced once we wire up real Fleexa pricing per
+// country/service/server (sms1/sms2/sms3).
 const tiers = [
   { id: 1, price: "$4.85", stock: "128 left" },
   { id: 2, price: "$6.34", stock: "54 left" },
   { id: 3, price: "$8.90", stock: "12 left" },
 ];
 
-type Step = "select" | "usa" | "all";
-
 export default function BuyNumberPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [step, setStep] = useState<Step>("select");
+  const [portal, setPortal] = useState(1);
 
-  const [usaService, setUsaService] = useState("");
-  const [usaPortal, setUsaPortal] = useState(1);
-  const [allCountry, setAllCountry] = useState("");
-  const [allService, setAllService] = useState("");
+  const [country, setCountry] = useState("");
+  const [service, setService] = useState("");
   const [selectedTier, setSelectedTier] = useState(1);
 
-  const usaPrice = usaPrices[usaService];
-  const allReady = allCountry !== "" && allService !== "";
+  const ready = country !== "" && service !== "";
 
   return (
     <>
@@ -102,222 +90,112 @@ export default function BuyNumberPage() {
 
         <div className="page-head">
           <h1>Rent a Phone Number</h1>
-          <p>Choose your preferred service type to get started</p>
+          <p>Choose a country and service to get started</p>
         </div>
 
         <main className="dashboard-main">
-          {/* STEP 1: choose type */}
-          <div className={`step ${step === "select" ? "active" : ""}`}>
-            <div className="opt-card">
-              <div className="opt-head">
-                <div className="opt-icon usa">🇺🇸</div>
-                <div>
-                  <div className="opt-title">USA Verification</div>
-                  <div className="opt-sub">
-                    Get a US phone number for SMS verification
-                  </div>
-                </div>
-              </div>
-              <p className="opt-desc">
-                Fast and reliable US phone numbers for verification services.
-              </p>
-              <button className="btn-start" onClick={() => setStep("usa")}>
-                Get Started →
-              </button>
+          <div className="portal-grid">
+            <div
+              className={`portal-tab ${portal === 1 ? "active" : ""}`}
+              onClick={() => setPortal(1)}
+            >
+              Portal 1
             </div>
-
-            <div className="opt-card">
-              <div className="opt-head">
-                <div className="opt-icon all">
-                  <Globe size={20} />
-                </div>
-                <div>
-                  <div className="opt-title">All Countries Number</div>
-                  <div className="opt-sub">
-                    Choose from phone numbers worldwide
-                  </div>
-                </div>
-              </div>
-              <p className="opt-desc">
-                Access phone numbers from multiple countries for global
-                verification needs.
-              </p>
-              <button className="btn-start" onClick={() => setStep("all")}>
-                Get Started →
-              </button>
+            <div
+              className={`portal-tab ${portal === 2 ? "active" : ""}`}
+              onClick={() => setPortal(2)}
+            >
+              Portal 2
             </div>
-
-            <div className="pro-tip">
-              <span className="em">💡</span>
-              <p>
-                <b>Pro Tip:</b> Both services share the same wallet balance.
-                You can switch between them anytime.
-              </p>
+            <div
+              className={`portal-tab ${portal === 3 ? "active" : ""}`}
+              onClick={() => setPortal(3)}
+            >
+              Portal 3
             </div>
           </div>
 
-          {/* STEP 2: USA verification flow */}
-          <div className={`step ${step === "usa" ? "active" : ""}`}>
-            <div className="portal-grid">
-              <div
-                className={`portal-tab ${usaPortal === 1 ? "active" : ""}`}
-                onClick={() => setUsaPortal(1)}
-              >
-                Portal 1
-              </div>
-              <div
-                className={`portal-tab ${usaPortal === 2 ? "active" : ""}`}
-                onClick={() => setUsaPortal(2)}
-              >
-                Portal 2
-              </div>
-              <div
-                className={`portal-tab ${usaPortal === 3 ? "active" : ""}`}
-                onClick={() => setUsaPortal(3)}
-              >
-                Portal 3
+          <div className="flow-box">
+            <div className="flow-head">
+              <a href="/dashboard" className="back-btn">
+                <ChevronLeft size={18} />
+              </a>
+              <div>
+                <div className="flow-title">Rent a Phone Number</div>
+                <div className="flow-sub">Portal {portal}</div>
               </div>
             </div>
 
-            <div className="flow-box">
-              <div className="flow-head">
-                <button
-                  className="back-btn"
-                  onClick={() => setStep("select")}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div>
-                  <div className="flow-title">USA Verification</div>
-                  <div className="flow-sub">Portal {usaPortal}</div>
-                </div>
-              </div>
-
-              <div className="field">
-                <label>Select Service</label>
-                <select
-                  value={usaService}
-                  onChange={(e) => setUsaService(e.target.value)}
-                >
-                  <option value="">Select a service...</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="telegram">Telegram</option>
-                  <option value="google">Google</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="discord">Discord</option>
-                </select>
-              </div>
-
-              <div className={`price-box ${usaPrice ? "show" : ""}`}>
-                <div>
-                  <div className="lbl">COST</div>
-                  <div className="cost mono">{usaPrice?.cost ?? "$0.00"}</div>
-                </div>
-                <div className="right">
-                  <div className="lbl">PROVIDER STATUS</div>
-                  <div className="status">{usaPrice?.status ?? "—"}</div>
-                </div>
-              </div>
-
-              <button
-                className={`btn-purchase ${usaPrice ? "enabled" : ""}`}
-                disabled={!usaPrice}
+            <div className="field">
+              <label>Select Country</label>
+              <select
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
               >
-                <ShoppingCart size={16} />
-                Purchase Number
-              </button>
+                <option value="">Select a country...</option>
+                <option value="us">🇺🇸 United States</option>
+                <option value="gb">🇬🇧 United Kingdom</option>
+                <option value="ng">🇳🇬 Nigeria</option>
+                <option value="ke">🇰🇪 Kenya</option>
+                <option value="in">🇮🇳 India</option>
+              </select>
             </div>
-          </div>
 
-          {/* STEP 3: All countries flow */}
-          <div className={`step ${step === "all" ? "active" : ""}`}>
-            <div className="flow-box">
-              <div className="flow-head">
-                <button
-                  className="back-btn"
-                  onClick={() => setStep("select")}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <div>
-                  <div className="flow-title">All Countries Portal 1</div>
-                  <div className="flow-sub">
-                    Premium Provider with real non-VoIP numbers
-                  </div>
-                </div>
-              </div>
+            <div className="field">
+              <label>Select Service</label>
+              <select
+                value={service}
+                onChange={(e) => setService(e.target.value)}
+              >
+                <option value="">Select a service...</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telegram">Telegram</option>
+                <option value="google">Google</option>
+                <option value="instagram">Instagram</option>
+                <option value="discord">Discord</option>
+              </select>
+            </div>
 
-              <div className="field">
-                <label>Select Country</label>
-                <select
-                  value={allCountry}
-                  onChange={(e) => setAllCountry(e.target.value)}
-                >
-                  <option value="">Select a country...</option>
-                  <option value="us">🇺🇸 United States</option>
-                  <option value="gb">🇬🇧 United Kingdom</option>
-                  <option value="ng">🇳🇬 Nigeria</option>
-                  <option value="ke">🇰🇪 Kenya</option>
-                  <option value="in">🇮🇳 India</option>
-                </select>
-              </div>
-
-              <div className="field">
-                <label>Select Service</label>
-                <select
-                  value={allService}
-                  onChange={(e) => setAllService(e.target.value)}
-                >
-                  <option value="">Select a service...</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="telegram">Telegram</option>
-                  <option value="google">Google</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="discord">Discord</option>
-                </select>
-              </div>
-
-              <div className={`tier-section ${allReady ? "show" : ""}`}>
-                <label>Select Price Tier</label>
-                <div className="tier-list">
-                  {tiers.map((tier) => (
-                    <div
-                      key={tier.id}
-                      className={`tier-card ${
-                        selectedTier === tier.id ? "selected" : ""
-                      }`}
-                      onClick={() => setSelectedTier(tier.id)}
-                    >
-                      <div className="tier-top">
-                        <div>
-                          <div className="lbl">PRICE</div>
-                          <div className="price mono">{tier.price}</div>
-                        </div>
-                        <div className="stock">
-                          {tier.stock}
-                          <br />
-                          <span className="lbl">STOCK</span>
-                        </div>
+            <div className={`tier-section ${ready ? "show" : ""}`}>
+              <label>Select Price Tier</label>
+              <div className="tier-list">
+                {tiers.map((tier) => (
+                  <div
+                    key={tier.id}
+                    className={`tier-card ${
+                      selectedTier === tier.id ? "selected" : ""
+                    }`}
+                    onClick={() => setSelectedTier(tier.id)}
+                  >
+                    <div className="tier-top">
+                      <div>
+                        <div className="lbl">PRICE</div>
+                        <div className="price mono">{tier.price}</div>
                       </div>
-                      <div className="tier-bottom">
-                        <span className="name">Tier {tier.id}</span>
-                        <span className="state">
-                          {selectedTier === tier.id ? "Selected" : "Select"}
-                        </span>
+                      <div className="stock">
+                        {tier.stock}
+                        <br />
+                        <span className="lbl">STOCK</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="tier-bottom">
+                      <span className="name">Tier {tier.id}</span>
+                      <span className="state">
+                        {selectedTier === tier.id ? "Selected" : "Select"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <button
-                className={`btn-purchase ${allReady ? "enabled" : ""}`}
-                disabled={!allReady}
-              >
-                <ShoppingCart size={16} />
-                Purchase Number
-              </button>
             </div>
+
+            <button
+              className={`btn-purchase ${ready ? "enabled" : ""}`}
+              disabled={!ready}
+            >
+              <ShoppingCart size={16} />
+              Purchase Number
+            </button>
           </div>
         </main>
       </div>
