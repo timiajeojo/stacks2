@@ -89,7 +89,7 @@ export default function BuyNumberPage() {
         </div>
 
         <div className="page-head">
-          <h1>Rent a Phone Number</h1>
+          <h1>Buy a Phone Number</h1>
           <p>Choose a country and service to get started</p>
         </div>
 
@@ -121,7 +121,7 @@ export default function BuyNumberPage() {
                 <ChevronLeft size={18} />
               </a>
               <div>
-                <div className="flow-title">Rent a Phone Number</div>
+                <div className="flow-title">Buy a Phone Number</div>
                 <div className="flow-sub">Portal {portal}</div>
               </div>
             </div>
