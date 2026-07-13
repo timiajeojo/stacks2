@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Menu,
   ChevronDown,
@@ -28,15 +28,50 @@ const tiers = [
   { id: 3, price: "$8.90", stock: "12 left" },
 ];
 
+type Country = { id: number; name: string; code: string; prefix?: string };
+
 export default function BuyNumberPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [portal, setPortal] = useState(1);
+
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [countriesError, setCountriesError] = useState("");
 
   const [country, setCountry] = useState("");
   const [service, setService] = useState("");
   const [selectedTier, setSelectedTier] = useState(1);
 
   const ready = country !== "" && service !== "";
+
+  useEffect(() => {
+    let cancelled = false;
+    setCountriesLoading(true);
+    setCountriesError("");
+    setCountry(""); // reset selection — country IDs differ per server
+
+    fetch(`/api/fleexa/countries?portal=${portal}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error) {
+          setCountriesError(data.error);
+          setCountries([]);
+        } else {
+          setCountries(data.countries || []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCountriesError("Couldn't load countries. Try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setCountriesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [portal]);
 
   return (
     <>
@@ -89,7 +124,7 @@ export default function BuyNumberPage() {
         </div>
 
         <div className="page-head">
-          <h1>Buy a Phone Number</h1>
+          <h1>Rent a Phone Number</h1>
           <p>Choose a country and service to get started</p>
         </div>
 
@@ -121,7 +156,7 @@ export default function BuyNumberPage() {
                 <ChevronLeft size={18} />
               </a>
               <div>
-                <div className="flow-title">Buy a Phone Number</div>
+                <div className="flow-title">Rent a Phone Number</div>
                 <div className="flow-sub">Portal {portal}</div>
               </div>
             </div>
@@ -131,14 +166,32 @@ export default function BuyNumberPage() {
               <select
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
+                disabled={countriesLoading || !!countriesError}
               >
-                <option value="">Select a country...</option>
-                <option value="us">🇺🇸 United States</option>
-                <option value="gb">🇬🇧 United Kingdom</option>
-                <option value="ng">🇳🇬 Nigeria</option>
-                <option value="ke">🇰🇪 Kenya</option>
-                <option value="in">🇮🇳 India</option>
+                <option value="">
+                  {countriesLoading
+                    ? "Loading countries…"
+                    : countriesError
+                    ? "Couldn't load countries"
+                    : "Select a country..."}
+                </option>
+                {countries.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
+              {countriesError && (
+                <div
+                  style={{
+                    color: "#ff9b9b",
+                    fontSize: "12.5px",
+                    marginTop: "8px",
+                  }}
+                >
+                  {countriesError}
+                </div>
+              )}
             </div>
 
             <div className="field">
