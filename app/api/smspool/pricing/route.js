@@ -1,17 +1,4 @@
 "use strict";
-// Server-only — never import this from a "use client" component.
-// Uses FLEEXA_API_KEY, which must stay out of the browser entirely.
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -49,35 +36,49 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fleexaFetch = void 0;
-var FLEEXA_BASE_URL = "https://fleexa.com.ng/developer";
-function fleexaFetch(path, init) {
+exports.GET = void 0;
+var server_1 = require("next/server");
+var smspool_1 = require("../../../lib/smspool");
+var pricing_1 = require("../../../lib/pricing");
+function GET(req) {
     return __awaiter(this, void 0, void 0, function () {
-        var apiKey, res, data, _a;
+        var country, service, _a, ok, data, cheapest, usdPrice, ngnPrice, err_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    apiKey = process.env.FLEEXA_API_KEY;
-                    if (!apiKey) {
-                        throw new Error("FLEEXA_API_KEY is not set in environment variables");
+                    country = req.nextUrl.searchParams.get("country");
+                    service = req.nextUrl.searchParams.get("service");
+                    if (!country || !service) {
+                        return [2 /*return*/, server_1.NextResponse.json({ error: "Both country and service are required" }, { status: 400 })];
                     }
-                    return [4 /*yield*/, fetch("".concat(FLEEXA_BASE_URL).concat(path), __assign(__assign({}, init), { headers: __assign({ Authorization: "Bearer ".concat(apiKey), "Content-Type": "application/json" }, ((init === null || init === void 0 ? void 0 : init.headers) || {})), cache: "no-store" }))];
+                    _b.label = 1;
                 case 1:
-                    res = _b.sent();
-                    data = null;
-                    _b.label = 2;
+                    _b.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, (0, smspool_1.smspoolFetch)("/request/pricing", {
+                            country: country,
+                            service: service,
+                        })];
                 case 2:
-                    _b.trys.push([2, 4, , 5]);
-                    return [4 /*yield*/, res.json()];
+                    _a = _b.sent(), ok = _a.ok, data = _a.data;
+                    if (!ok || !Array.isArray(data) || data.length === 0) {
+                        return [2 /*return*/, server_1.NextResponse.json({ error: "No pricing available for this country/service" }, { status: 404 })];
+                    }
+                    cheapest = data.reduce(function (min, p) {
+                        return Number(p.price) < Number(min.price) ? p : min;
+                    });
+                    usdPrice = Number(cheapest.price);
+                    ngnPrice = (0, pricing_1.usdToNgn)(usdPrice);
+                    return [2 /*return*/, server_1.NextResponse.json({
+                            pool: cheapest.pool,
+                            priceNaira: Math.ceil(ngnPrice), // round up to whole Naira
+                        })];
                 case 3:
-                    data = _b.sent();
-                    return [3 /*break*/, 5];
-                case 4:
-                    _a = _b.sent();
-                    return [3 /*break*/, 5];
-                case 5: return [2 /*return*/, { ok: res.ok, status: res.status, data: data }];
+                    err_1 = _b.sent();
+                    console.error("SMSPool pricing error:", err_1);
+                    return [2 /*return*/, server_1.NextResponse.json({ error: "Server error fetching pricing" }, { status: 500 })];
+                case 4: return [2 /*return*/];
             }
         });
     });
 }
-exports.fleexaFetch = fleexaFetch;
+exports.GET = GET;

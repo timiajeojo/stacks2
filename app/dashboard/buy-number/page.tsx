@@ -20,43 +20,49 @@ const navItems = [
   { label: "Rentals", href: "/dashboard/rentals", icon: Package },
 ];
 
-// Placeholder — will be replaced once we wire up real Fleexa pricing per
-// country/service/server (sms1/sms2/sms3).
-const tiers = [
-  { id: 1, price: "$4.85", stock: "128 left" },
-  { id: 2, price: "$6.34", stock: "54 left" },
-  { id: 3, price: "$8.90", stock: "12 left" },
-];
+type Country = { id: number; name: string; code: string; region: string };
+type Service = { id: number; name: string };
 
-type Country = { id: number; name: string; code: string; prefix?: string };
+function formatNaira(amount: number): string {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
 export default function BuyNumberPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [portal, setPortal] = useState(1);
 
   const [countries, setCountries] = useState<Country[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(true);
   const [countriesError, setCountriesError] = useState("");
 
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [servicesError, setServicesError] = useState("");
+
   const [country, setCountry] = useState("");
   const [service, setService] = useState("");
-  const [selectedTier, setSelectedTier] = useState(1);
 
-  const ready = country !== "" && service !== "";
+  const [priceNaira, setPriceNaira] = useState<number | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState("");
 
+  const ready = country !== "" && service !== "" && priceNaira !== null;
+
+  // Load countries once on mount
   useEffect(() => {
     let cancelled = false;
     setCountriesLoading(true);
     setCountriesError("");
-    setCountry(""); // reset selection — country IDs differ per server
 
-    fetch(`/api/fleexa/countries?portal=${portal}`)
+    fetch("/api/smspool/countries")
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
         if (data.error) {
           setCountriesError(data.error);
-          setCountries([]);
         } else {
           setCountries(data.countries || []);
         }
@@ -71,7 +77,73 @@ export default function BuyNumberPage() {
     return () => {
       cancelled = true;
     };
-  }, [portal]);
+  }, []);
+
+  // Load services whenever the selected country changes
+  useEffect(() => {
+    setService("");
+    setServices([]);
+    setPriceNaira(null);
+
+    if (!country) return;
+
+    let cancelled = false;
+    setServicesLoading(true);
+    setServicesError("");
+
+    fetch(`/api/smspool/services?country=${country}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error) {
+          setServicesError(data.error);
+        } else {
+          setServices(data.services || []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setServicesError("Couldn't load services. Try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setServicesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [country]);
+
+  // Load price whenever country + service are both selected
+  useEffect(() => {
+    setPriceNaira(null);
+
+    if (!country || !service) return;
+
+    let cancelled = false;
+    setPriceLoading(true);
+    setPriceError("");
+
+    fetch(`/api/smspool/pricing?country=${country}&service=${service}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error) {
+          setPriceError(data.error);
+        } else {
+          setPriceNaira(data.priceNaira);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPriceError("Couldn't load pricing. Try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setPriceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [country, service]);
 
   return (
     <>
@@ -129,27 +201,6 @@ export default function BuyNumberPage() {
         </div>
 
         <main className="dashboard-main">
-          <div className="portal-grid">
-            <div
-              className={`portal-tab ${portal === 1 ? "active" : ""}`}
-              onClick={() => setPortal(1)}
-            >
-              Portal 1
-            </div>
-            <div
-              className={`portal-tab ${portal === 2 ? "active" : ""}`}
-              onClick={() => setPortal(2)}
-            >
-              Portal 2
-            </div>
-            <div
-              className={`portal-tab ${portal === 3 ? "active" : ""}`}
-              onClick={() => setPortal(3)}
-            >
-              Portal 3
-            </div>
-          </div>
-
           <div className="flow-box">
             <div className="flow-head">
               <a href="/dashboard" className="back-btn">
@@ -157,7 +208,6 @@ export default function BuyNumberPage() {
               </a>
               <div>
                 <div className="flow-title">Rent a Phone Number</div>
-                <div className="flow-sub">Portal {portal}</div>
               </div>
             </div>
 
@@ -182,13 +232,7 @@ export default function BuyNumberPage() {
                 ))}
               </select>
               {countriesError && (
-                <div
-                  style={{
-                    color: "#ff9b9b",
-                    fontSize: "12.5px",
-                    marginTop: "8px",
-                  }}
-                >
+                <div style={{ color: "#ff9b9b", fontSize: "12.5px", marginTop: "8px" }}>
                   {countriesError}
                 </div>
               )}
@@ -199,53 +243,48 @@ export default function BuyNumberPage() {
               <select
                 value={service}
                 onChange={(e) => setService(e.target.value)}
+                disabled={!country || servicesLoading || !!servicesError}
               >
-                <option value="">Select a service...</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="telegram">Telegram</option>
-                <option value="google">Google</option>
-                <option value="instagram">Instagram</option>
-                <option value="discord">Discord</option>
-              </select>
-            </div>
-
-            <div className={`tier-section ${ready ? "show" : ""}`}>
-              <label>Select Price Tier</label>
-              <div className="tier-list">
-                {tiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className={`tier-card ${
-                      selectedTier === tier.id ? "selected" : ""
-                    }`}
-                    onClick={() => setSelectedTier(tier.id)}
-                  >
-                    <div className="tier-top">
-                      <div>
-                        <div className="lbl">PRICE</div>
-                        <div className="price mono">{tier.price}</div>
-                      </div>
-                      <div className="stock">
-                        {tier.stock}
-                        <br />
-                        <span className="lbl">STOCK</span>
-                      </div>
-                    </div>
-                    <div className="tier-bottom">
-                      <span className="name">Tier {tier.id}</span>
-                      <span className="state">
-                        {selectedTier === tier.id ? "Selected" : "Select"}
-                      </span>
-                    </div>
-                  </div>
+                <option value="">
+                  {!country
+                    ? "Select a country first"
+                    : servicesLoading
+                    ? "Loading services…"
+                    : servicesError
+                    ? "Couldn't load services"
+                    : "Select a service..."}
+                </option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
-              </div>
+              </select>
+              {servicesError && (
+                <div style={{ color: "#ff9b9b", fontSize: "12.5px", marginTop: "8px" }}>
+                  {servicesError}
+                </div>
+              )}
             </div>
 
-            <button
-              className={`btn-purchase ${ready ? "enabled" : ""}`}
-              disabled={!ready}
-            >
+            {(priceLoading || priceNaira !== null || priceError) && (
+              <div className={`price-box ${priceNaira !== null ? "show" : ""}`} style={{ display: "flex" }}>
+                {priceLoading ? (
+                  <div className="lbl">Checking price…</div>
+                ) : priceError ? (
+                  <div style={{ color: "#ff9b9b", fontSize: "13px" }}>{priceError}</div>
+                ) : (
+                  <>
+                    <div>
+                      <div className="lbl">COST</div>
+                      <div className="cost mono">{formatNaira(priceNaira!)}</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            <button className={`btn-purchase ${ready ? "enabled" : ""}`} disabled={!ready}>
               <ShoppingCart size={16} />
               Purchase Number
             </button>

@@ -1,4 +1,8 @@
 "use strict";
+// Server-only — never import this from a "use client" component.
+// SMSPool's own docs are inconsistent about auth: some endpoints expect the
+// key as a form field, others rely on the Authorization header. We send
+// both on every request — harmless, and covers whichever each one checks.
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -46,48 +50,65 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.GET = void 0;
-var server_1 = require("next/server");
-var fleexa_1 = require("../../../lib/fleexa");
-// Each server has its own separate country list/IDs — not shared.
-var PORTAL_PATHS = {
-    "1": "/sms/countries",
-    "2": "/sms2/countries",
-    "3": "/sms3/countries",
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
 };
-function GET(req) {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.smspoolFetch = void 0;
+var SMSPOOL_BASE_URL = "https://api.smspool.net";
+function smspoolFetch(path, params, method) {
+    if (params === void 0) { params = {}; }
+    if (method === void 0) { method = "POST"; }
     return __awaiter(this, void 0, void 0, function () {
-        var portal, path, _a, ok, data, raw, countries, err_1;
+        var apiKey, headers, url, body, qs, res, data, _a;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    portal = req.nextUrl.searchParams.get("portal") || "1";
-                    path = PORTAL_PATHS[portal];
-                    if (!path) {
-                        return [2 /*return*/, server_1.NextResponse.json({ error: "Invalid portal. Use 1, 2, or 3." }, { status: 400 })];
+                    apiKey = process.env.SMSPOOL_API_KEY;
+                    if (!apiKey) {
+                        throw new Error("SMSPOOL_API_KEY is not set in environment variables");
                     }
-                    _b.label = 1;
+                    headers = {
+                        Authorization: "Bearer ".concat(apiKey),
+                    };
+                    url = "".concat(SMSPOOL_BASE_URL).concat(path);
+                    if (method === "GET") {
+                        qs = new URLSearchParams(params);
+                        if (__spreadArray([], qs, true).length > 0)
+                            url += "?".concat(qs.toString());
+                    }
+                    else {
+                        body = new URLSearchParams(__assign(__assign({}, params), { key: apiKey }));
+                        headers["Content-Type"] = "application/x-www-form-urlencoded";
+                    }
+                    return [4 /*yield*/, fetch(url, {
+                            method: method,
+                            headers: headers,
+                            body: body,
+                            cache: "no-store",
+                        })];
                 case 1:
-                    _b.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, (0, fleexa_1.fleexaFetch)(path)];
+                    res = _b.sent();
+                    data = null;
+                    _b.label = 2;
                 case 2:
-                    _a = _b.sent(), ok = _a.ok, data = _a.data;
-                    if (!ok || !(data === null || data === void 0 ? void 0 : data.success)) {
-                        return [2 /*return*/, server_1.NextResponse.json({ error: (data === null || data === void 0 ? void 0 : data.message) || "Failed to fetch countries from Fleexa" }, { status: 502 })];
-                    }
-                    raw = (data.data || {});
-                    countries = Object.values(raw)
-                        .map(function (c) { return (__assign({ id: c.id, name: c.title, code: c.code }, (c.prefix ? { prefix: c.prefix } : {}))); })
-                        .sort(function (a, b) { return a.name.localeCompare(b.name); });
-                    return [2 /*return*/, server_1.NextResponse.json({ countries: countries })];
+                    _b.trys.push([2, 4, , 5]);
+                    return [4 /*yield*/, res.json()];
                 case 3:
-                    err_1 = _b.sent();
-                    console.error("Fleexa countries error:", err_1);
-                    return [2 /*return*/, server_1.NextResponse.json({ error: "Server error fetching countries" }, { status: 500 })];
-                case 4: return [2 /*return*/];
+                    data = _b.sent();
+                    return [3 /*break*/, 5];
+                case 4:
+                    _a = _b.sent();
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/, { ok: res.ok, status: res.status, data: data }];
             }
         });
     });
 }
-exports.GET = GET;
+exports.smspoolFetch = smspoolFetch;
