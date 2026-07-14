@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Menu,
   ChevronDown,
   ChevronLeft,
   ShoppingCart,
+  Search,
   LayoutGrid,
   ArrowDownToLine,
   CheckCircle2,
@@ -31,6 +32,16 @@ function formatNaira(amount: number): string {
   }).format(amount);
 }
 
+// Converts a 2-letter country code into its flag emoji via Unicode regional
+// indicator symbols — no image assets or extra libraries needed.
+function flagEmoji(code: string): string {
+  if (!/^[A-Za-z]{2}$/.test(code)) return "🌐";
+  const points = [...code.toUpperCase()].map(
+    (c) => 127397 + c.charCodeAt(0)
+  );
+  return String.fromCodePoint(...points);
+}
+
 export default function BuyNumberPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -45,11 +56,42 @@ export default function BuyNumberPage() {
   const [country, setCountry] = useState("");
   const [service, setService] = useState("");
 
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const countryRef = useRef<HTMLDivElement>(null);
+  const serviceRef = useRef<HTMLDivElement>(null);
+
   const [priceNaira, setPriceNaira] = useState<number | null>(null);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState("");
 
   const ready = country !== "" && service !== "" && priceNaira !== null;
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (countryRef.current && !countryRef.current.contains(target)) {
+        setCountryOpen(false);
+      }
+      if (serviceRef.current && !serviceRef.current.contains(target)) {
+        setServiceOpen(false);
+      }
+    }
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
+
+  const selectedCountry = countries.find((c) => String(c.id) === country);
+  const selectedService = services.find((s) => String(s.id) === service);
+
+  const filteredCountries = countries.filter((c) =>
+    c.name.toLowerCase().includes(countrySearch.toLowerCase())
+  );
+  const filteredServices = services.filter((s) =>
+    s.name.toLowerCase().includes(serviceSearch.toLowerCase())
+  );
 
   // Load countries once on mount
   useEffect(() => {
@@ -211,26 +253,70 @@ export default function BuyNumberPage() {
               </div>
             </div>
 
-            <div className="field">
+            <div className="field select-wrap" ref={countryRef}>
               <label>Select Country</label>
-              <select
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
+              <button
+                type="button"
+                className={`select-trigger ${!selectedCountry ? "placeholder" : ""} ${
+                  countriesLoading || countriesError ? "disabled" : ""
+                }`}
                 disabled={countriesLoading || !!countriesError}
+                onClick={() => {
+                  setServiceOpen(false);
+                  setCountryOpen((v) => !v);
+                }}
               >
-                <option value="">
+                <span className="label-text">
+                  {selectedCountry && (
+                    <span className="flag">{flagEmoji(selectedCountry.code)}</span>
+                  )}
                   {countriesLoading
                     ? "Loading countries…"
                     : countriesError
                     ? "Couldn't load countries"
+                    : selectedCountry
+                    ? selectedCountry.name
                     : "Select a country..."}
-                </option>
-                {countries.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                </span>
+                <ChevronDown className="chev" size={14} />
+              </button>
+
+              {countryOpen && (
+                <div className="select-dropdown">
+                  <div className="select-dropdown-search">
+                    <Search size={14} />
+                    <input
+                      placeholder="Search countries…"
+                      value={countrySearch}
+                      onChange={(e) => setCountrySearch(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="select-dropdown-list">
+                    {filteredCountries.length === 0 ? (
+                      <div className="select-dropdown-empty">No countries found</div>
+                    ) : (
+                      filteredCountries.map((c) => (
+                        <div
+                          key={c.id}
+                          className={`select-dropdown-item ${
+                            country === String(c.id) ? "selected" : ""
+                          }`}
+                          onClick={() => {
+                            setCountry(String(c.id));
+                            setCountryOpen(false);
+                            setCountrySearch("");
+                          }}
+                        >
+                          <span className="flag">{flagEmoji(c.code)}</span>
+                          {c.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               {countriesError && (
                 <div style={{ color: "#ff9b9b", fontSize: "12.5px", marginTop: "8px" }}>
                   {countriesError}
@@ -238,28 +324,68 @@ export default function BuyNumberPage() {
               )}
             </div>
 
-            <div className="field">
+            <div className="field select-wrap" ref={serviceRef}>
               <label>Select Service</label>
-              <select
-                value={service}
-                onChange={(e) => setService(e.target.value)}
+              <button
+                type="button"
+                className={`select-trigger ${!selectedService ? "placeholder" : ""} ${
+                  !country || servicesLoading || servicesError ? "disabled" : ""
+                }`}
                 disabled={!country || servicesLoading || !!servicesError}
+                onClick={() => {
+                  setCountryOpen(false);
+                  setServiceOpen((v) => !v);
+                }}
               >
-                <option value="">
+                <span className="label-text">
                   {!country
                     ? "Select a country first"
                     : servicesLoading
                     ? "Loading services…"
                     : servicesError
                     ? "Couldn't load services"
+                    : selectedService
+                    ? selectedService.name
                     : "Select a service..."}
-                </option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                </span>
+                <ChevronDown className="chev" size={14} />
+              </button>
+
+              {serviceOpen && (
+                <div className="select-dropdown">
+                  <div className="select-dropdown-search">
+                    <Search size={14} />
+                    <input
+                      placeholder="Search services…"
+                      value={serviceSearch}
+                      onChange={(e) => setServiceSearch(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="select-dropdown-list">
+                    {filteredServices.length === 0 ? (
+                      <div className="select-dropdown-empty">No services found</div>
+                    ) : (
+                      filteredServices.map((s) => (
+                        <div
+                          key={s.id}
+                          className={`select-dropdown-item ${
+                            service === String(s.id) ? "selected" : ""
+                          }`}
+                          onClick={() => {
+                            setService(String(s.id));
+                            setServiceOpen(false);
+                            setServiceSearch("");
+                          }}
+                        >
+                          {s.name}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               {servicesError && (
                 <div style={{ color: "#ff9b9b", fontSize: "12.5px", marginTop: "8px" }}>
                   {servicesError}
