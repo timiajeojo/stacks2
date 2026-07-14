@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../lib/firebase";
 import {
   Menu,
   ChevronDown,
@@ -43,6 +46,7 @@ function flagEmoji(code: string): string {
 }
 
 export default function BuyNumberPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [countries, setCountries] = useState<Country[]>([]);
@@ -68,6 +72,39 @@ export default function BuyNumberPage() {
   const [priceError, setPriceError] = useState("");
 
   const ready = country !== "" && service !== "" && priceNaira !== null;
+
+  const [purchasing, setPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState("");
+
+  async function handlePurchase() {
+    if (!auth.currentUser) {
+      router.push("/auth");
+      return;
+    }
+    setPurchasing(true);
+    setPurchaseError("");
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/smspool/purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ country, service }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setPurchaseError(data.error);
+      } else {
+        router.push("/dashboard/verifications");
+      }
+    } catch {
+      setPurchaseError("Something went wrong. Please try again.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -410,9 +447,29 @@ export default function BuyNumberPage() {
               </div>
             )}
 
-            <button className={`btn-purchase ${ready ? "enabled" : ""}`} disabled={!ready}>
+            {purchaseError && (
+              <div
+                style={{
+                  background: "rgba(255,92,92,0.1)",
+                  border: "1px solid rgba(255,92,92,0.35)",
+                  color: "#ff9b9b",
+                  fontSize: "13px",
+                  borderRadius: "9px",
+                  padding: "10px 14px",
+                  marginBottom: "16px",
+                }}
+              >
+                {purchaseError}
+              </div>
+            )}
+
+            <button
+              className={`btn-purchase ${ready && !purchasing ? "enabled" : ""}`}
+              disabled={!ready || purchasing}
+              onClick={handlePurchase}
+            >
               <ShoppingCart size={16} />
-              Purchase Number
+              {purchasing ? "Purchasing…" : "Purchase Number"}
             </button>
           </div>
         </main>

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, onSnapshot, orderBy, query, Timestamp } from "firebase/firestore";
+import { auth, db } from "../../lib/firebase";
 import {
   Menu,
   ChevronDown,
@@ -9,10 +13,8 @@ import {
   Copy,
   Check,
   Timer,
-  Circle,
   CheckCircle2,
-  Info,
-  AlertTriangle,
+  AlertCircle,
   XCircle,
   LayoutGrid,
   ArrowDownToLine,
@@ -29,107 +31,117 @@ const navItems = [
   { label: "Rentals", href: "/dashboard/rentals", icon: Package },
 ];
 
+type RentalStatus = "waiting" | "received" | "expired" | "refunded";
+
 type Rental = {
   id: string;
-  flag: string;
   number: string;
   country: string;
+  countryCode: string;
   service: string;
-  status: "active" | "inactive";
-  otps: number;
-  expiresIn: string;
-  rentedAt: string;
-  message: { code: string; time: string } | null;
+  status: RentalStatus;
+  otpsReceived: number;
+  lastCode: string | null;
+  purchasedAt: Timestamp | null;
+  expiresAt: number | null;
 };
 
-const rentals: Rental[] = [
-  {
-    id: "1",
-    flag: "🇳🇬",
-    number: "+234 812 040 331",
-    country: "Nigeria",
-    service: "WHATSAPP",
-    status: "active",
-    otps: 1,
-    expiresIn: "08:42:11",
-    rentedAt: "Today 9:03 AM",
-    message: { code: "482 917", time: "Today, 9:14 AM · 2 min ago" },
-  },
-  {
-    id: "2",
-    flag: "🇺🇸",
-    number: "+1 609 728 9920",
-    country: "United States",
-    service: "SIGNAL",
-    status: "active",
-    otps: 0,
-    expiresIn: "04:58:02",
-    rentedAt: "Today 8:41 AM",
-    message: null,
-  },
-  {
-    id: "3",
-    flag: "🇬🇧",
-    number: "+44 771 290 5578",
-    country: "United Kingdom",
-    service: "GOOGLE",
-    status: "inactive",
-    otps: 1,
-    expiresIn: "00:00:00",
-    rentedAt: "Yesterday 7:02 PM",
-    message: { code: "216 590", time: "Yesterday, 7:12 PM" },
-  },
+const statusOptions: { value: RentalStatus; label: string; icon: any }[] = [
+  { value: "waiting", label: "Waiting", icon: Timer },
+  { value: "received", label: "Received", icon: CheckCircle2 },
+  { value: "expired", label: "Expired", icon: AlertCircle },
+  { value: "refunded", label: "Refunded", icon: XCircle },
 ];
 
-const statusOptions = [
-  { value: "all", label: "All Status", icon: null },
-  { value: "created", label: "Created", icon: Circle },
-  { value: "pending", label: "Pending", icon: Timer },
-  { value: "active", label: "Active", icon: CheckCircle2 },
-  { value: "inactive", label: "Inactive", icon: Info },
-  { value: "expired", label: "Expired", icon: AlertTriangle },
-  { value: "cancelled", label: "Cancelled", icon: XCircle },
-];
+function formatTimeLeft(expiresAt: number | null, now: number): string {
+  if (!expiresAt) return "—";
+  const diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+  if (diff <= 0) return "Expired";
+  const h = String(Math.floor(diff / 3600)).padStart(2, "0");
+  const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+  const s = String(diff % 60).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+function formatRentedAt(ts: Timestamp | null): string {
+  if (!ts) return "—";
+  return ts.toDate().toLocaleString("en-NG", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function VerificationsPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [communityDismissed, setCommunityDismissed] = useState(false);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [now, setNow] = useState(Date.now());
+
+  const [search, setSearch] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [serviceOpen, setServiceOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<RentalStatus | "all">("all");
   const [serviceFilter, setServiceFilter] = useState("all");
+
   const [copiedNumberId, setCopiedNumberId] = useState<string | null>(null);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+
   const rentalListRef = useRef<HTMLDivElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
 
-  // Derived from the numbers the user has actually purchased — once real
-  // data is wired up this will reflect their real rentals automatically.
-  const serviceOptions = [
-    "all",
-    ...Array.from(new Set(rentals.map((r) => r.service))),
-  ];
+  // Auth guard + live rental data
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+      const q = query(
+        collection(db, "users", user.uid, "rentals"),
+        orderBy("purchasedAt", "desc")
+      );
+      const unsubRentals = onSnapshot(q, (snap) => {
+        setRentals(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() } as Rental))
+        );
+      });
+      return () => unsubRentals();
+    });
+    return () => unsub();
+  }, [router]);
 
-  function copyNumber(id: string, number: string) {
-    navigator.clipboard.writeText(number).catch(() => {});
-    setCopiedNumberId(id);
-    setTimeout(() => setCopiedNumberId(null), 1500);
-  }
+  // Live countdown ticker
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-  function copyCode(id: string, code: string) {
-    navigator.clipboard.writeText(code.replace(/\s/g, "")).catch(() => {});
-    setCopiedCodeId(id);
-    setTimeout(() => setCopiedCodeId(null), 1500);
-  }
+  // Poll for codes on any still-waiting rentals, every 25s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const waiting = rentals.filter((r) => r.status === "waiting");
+      if (waiting.length === 0) return;
 
+      const token = await user.getIdToken();
+      waiting.forEach((r) => {
+        fetch(`/api/smspool/check?rentalId=${r.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      });
+    }, 25000);
+    return () => clearInterval(interval);
+  }, [rentals]);
+
+  // Outside-click closes popovers/dropdowns (containment-based, not stopPropagation)
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
       const target = e.target as Node;
-      // Only close if the click genuinely landed outside these containers —
-      // fixes a bug where every click (including the one that opened a
-      // popover/dropdown) was immediately closing it again.
       if (rentalListRef.current && !rentalListRef.current.contains(target)) {
         setOpenPopoverId(null);
       }
@@ -142,8 +154,37 @@ export default function VerificationsPage() {
     return () => document.removeEventListener("click", handleOutsideClick);
   }, []);
 
+  function copyNumber(id: string, number: string) {
+    navigator.clipboard.writeText(number).catch(() => {});
+    setCopiedNumberId(id);
+    setTimeout(() => setCopiedNumberId(null), 1500);
+  }
+
+  function copyCode(id: string, code: string) {
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 1500);
+  }
+
+  // Service list built only from services the user has actually purchased
+  const serviceOptions = [
+    "all",
+    ...Array.from(new Set(rentals.map((r) => r.service))),
+  ];
+
+  const filteredRentals = rentals.filter((r) => {
+    if (statusFilter !== "all" && r.status !== statusFilter) return false;
+    if (serviceFilter !== "all" && r.service !== serviceFilter) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const haystack = `${r.number} ${r.service} ${r.country}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
-    <div ref={wrapRef}>
+    <div>
       <div
         className={`dashboard-backdrop ${drawerOpen ? "open" : ""}`}
         onClick={() => setDrawerOpen(false)}
@@ -213,8 +254,22 @@ export default function VerificationsPage() {
 
           <div className="search-box">
             <Search size={14} />
-            Search by number, service, or country…
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by number, service, or country…"
+              style={{
+                background: "none",
+                border: "none",
+                outline: "none",
+                color: "var(--paper)",
+                fontSize: "13.5px",
+                width: "100%",
+                fontFamily: "inherit",
+              }}
+            />
           </div>
+
           <div className="filter-row" ref={filterRowRef}>
             <div className="filter-wrap">
               <div
@@ -225,29 +280,37 @@ export default function VerificationsPage() {
                   setStatusOpen((v) => !v);
                 }}
               >
-                {statusOptions.find((s) => s.value === statusFilter)?.label}
+                {statusFilter === "all"
+                  ? "All Status"
+                  : statusOptions.find((s) => s.value === statusFilter)?.label}
                 <ChevronDown className="chev" size={14} />
               </div>
               {statusOpen && (
-                <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
+                <div className="filter-menu">
+                  <div
+                    className={`filter-menu-item ${statusFilter === "all" ? "selected" : ""}`}
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setStatusOpen(false);
+                    }}
+                  >
+                    <div className="left">All Status</div>
+                    {statusFilter === "all" && <Check size={14} className="check" />}
+                  </div>
                   {statusOptions.map((opt) => (
                     <div
                       key={opt.value}
-                      className={`filter-menu-item ${
-                        statusFilter === opt.value ? "selected" : ""
-                      }`}
+                      className={`filter-menu-item ${statusFilter === opt.value ? "selected" : ""}`}
                       onClick={() => {
                         setStatusFilter(opt.value);
                         setStatusOpen(false);
                       }}
                     >
                       <div className="left">
-                        {opt.icon && <opt.icon size={15} />}
+                        <opt.icon size={15} />
                         {opt.label}
                       </div>
-                      {statusFilter === opt.value && (
-                        <Check size={14} className="check" />
-                      )}
+                      {statusFilter === opt.value && <Check size={14} className="check" />}
                     </div>
                   ))}
                 </div>
@@ -267,13 +330,11 @@ export default function VerificationsPage() {
                 <ChevronDown className="chev" size={14} />
               </div>
               {serviceOpen && (
-                <div className="filter-menu" onClick={(e) => e.stopPropagation()}>
+                <div className="filter-menu">
                   {serviceOptions.map((service) => (
                     <div
                       key={service}
-                      className={`filter-menu-item ${
-                        serviceFilter === service ? "selected" : ""
-                      }`}
+                      className={`filter-menu-item ${serviceFilter === service ? "selected" : ""}`}
                       onClick={() => {
                         setServiceFilter(service);
                         setServiceOpen(false);
@@ -282,9 +343,7 @@ export default function VerificationsPage() {
                       <div className="left">
                         {service === "all" ? "All Services" : service}
                       </div>
-                      {serviceFilter === service && (
-                        <Check size={14} className="check" />
-                      )}
+                      {serviceFilter === service && <Check size={14} className="check" />}
                     </div>
                   ))}
                 </div>
@@ -294,10 +353,7 @@ export default function VerificationsPage() {
 
           {!communityDismissed && (
             <div className="community-card">
-              <button
-                className="close"
-                onClick={() => setCommunityDismissed(true)}
-              >
+              <button className="close" onClick={() => setCommunityDismissed(true)}>
                 <X size={14} />
               </button>
               <p>
@@ -312,104 +368,119 @@ export default function VerificationsPage() {
           )}
 
           <div className="rental-list" ref={rentalListRef}>
-            {rentals.map((r) => (
-              <div className="rental-card" key={r.id}>
-                <div className="rc-top">
-                  <div className="rc-flag">{r.flag}</div>
-                  <div className="rc-meta">
-                    <div className="rc-number mono">{r.number}</div>
-                    <div className="rc-country">{r.country}</div>
-                  </div>
-                  <div className="rc-actions">
-                    <button
-                      className={`icon-sq sms-btn ${r.message ? "" : "empty"}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenPopoverId(
-                          openPopoverId === r.id ? null : r.id
-                        );
-                      }}
-                    >
-                      {r.message && <span className="ping" />}
-                      <Mail size={15} />
-                      {openPopoverId === r.id && (
-                        <div className="sms-pop open">
-                          {r.message ? (
-                            <>
-                              <div className="lbl">MESSAGE RECEIVED</div>
-                              <div
-                                className="code"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyCode(r.id, r.message!.code);
-                                }}
-                              >
-                                {r.message.code}
-                              </div>
-                              <div
-                                className={`time ${
-                                  copiedCodeId === r.id ? "copied-note" : ""
-                                }`}
-                              >
-                                {copiedCodeId === r.id
-                                  ? "Copied to clipboard ✓"
-                                  : r.message.time}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="lbl">MESSAGE STATUS</div>
-                              <div className="empty-txt">
-                                No messages yet — waiting for the code.
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                    <button
-                      className="icon-sq"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyNumber(r.id, r.number);
-                      }}
-                    >
-                      {copiedNumberId === r.id ? (
-                        <Check size={14} color="var(--teal)" />
-                      ) : (
-                        <Copy size={14} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="rc-tags">
-                  <span className="tag service">{r.service}</span>
-                  <span className={`tag ${r.status}`}>
-                    {r.status === "active" ? "Active" : "Inactive"}
-                  </span>
-                </div>
-
-                <div className="rc-stats">
-                  <div className="rc-stat">
-                    <div className="lbl">OTPs Received</div>
-                    <div className="val">{r.otps}</div>
-                  </div>
-                  <div className="rc-stat">
-                    <div className="lbl">Expires In</div>
-                    <div className="val exp mono">
-                      <Timer size={13} />
-                      {r.expiresIn}
+            {filteredRentals.length === 0 ? (
+              <div style={{ color: "var(--paper-dim)", fontSize: "13.5px", textAlign: "center", padding: "32px 0" }}>
+                {rentals.length === 0
+                  ? "You haven't rented any numbers yet."
+                  : "No rentals match your filters."}
+              </div>
+            ) : (
+              filteredRentals.map((r) => (
+                <div className="rental-card" key={r.id}>
+                  <div className="rc-top">
+                    <div className="rc-flag">📱</div>
+                    <div className="rc-meta">
+                      <div className="rc-number mono">{r.number}</div>
+                      <div className="rc-country">{r.country}</div>
+                    </div>
+                    <div className="rc-actions">
+                      <button
+                        className={`icon-sq sms-btn ${r.lastCode ? "" : "empty"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenPopoverId(openPopoverId === r.id ? null : r.id);
+                        }}
+                      >
+                        {r.lastCode && <span className="ping" />}
+                        <Mail size={15} />
+                        {openPopoverId === r.id && (
+                          <div className="sms-pop open">
+                            {r.lastCode ? (
+                              <>
+                                <div className="lbl">MESSAGE RECEIVED</div>
+                                <div
+                                  className="code"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyCode(r.id, r.lastCode!);
+                                  }}
+                                >
+                                  {r.lastCode}
+                                </div>
+                                <div className={`time ${copiedCodeId === r.id ? "copied-note" : ""}`}>
+                                  {copiedCodeId === r.id ? "Copied to clipboard ✓" : "Tap code to copy"}
+                                </div>
+                              </>
+                            ) : r.status === "refunded" ? (
+                              <>
+                                <div className="lbl">REFUNDED</div>
+                                <div className="empty-txt">
+                                  No code arrived — this order was refunded.
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="lbl">MESSAGE STATUS</div>
+                                <div className="empty-txt">
+                                  No messages yet — waiting for the code.
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                      <button
+                        className="icon-sq"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyNumber(r.id, r.number);
+                        }}
+                      >
+                        {copiedNumberId === r.id ? (
+                          <Check size={14} color="var(--teal)" />
+                        ) : (
+                          <Copy size={14} />
+                        )}
+                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="rc-footer">
-                  <div className="lbl">Rented At</div>
-                  <div className="val">{r.rentedAt}</div>
+                  <div className="rc-tags">
+                    <span className="tag service">{r.service}</span>
+                    <span
+                      className={`tag ${
+                        r.status === "received"
+                          ? "active"
+                          : r.status === "waiting"
+                          ? "service"
+                          : "inactive"
+                      }`}
+                    >
+                      {statusOptions.find((s) => s.value === r.status)?.label || r.status}
+                    </span>
+                  </div>
+
+                  <div className="rc-stats">
+                    <div className="rc-stat">
+                      <div className="lbl">OTPs Received</div>
+                      <div className="val">{r.otpsReceived}</div>
+                    </div>
+                    <div className="rc-stat">
+                      <div className="lbl">Expires In</div>
+                      <div className="val exp mono">
+                        <Timer size={13} />
+                        {formatTimeLeft(r.expiresAt, now)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rc-footer">
+                    <div className="lbl">Rented At</div>
+                    <div className="val">{formatRentedAt(r.purchasedAt)}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </main>
       </div>
