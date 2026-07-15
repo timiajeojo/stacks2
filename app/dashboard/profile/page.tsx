@@ -24,7 +24,6 @@ import {
   reauthenticateWithCredential,
   updatePassword,
   updateProfile,
-  verifyBeforeUpdateEmail,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
@@ -75,7 +74,9 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
@@ -133,17 +134,10 @@ export default function ProfilePage() {
       }
       await setDoc(
         doc(db, "users", user.uid),
-        { fullName: name, phone, email },
+        { fullName: name, phone },
         { merge: true }
       );
-      if (email !== user.email) {
-        await verifyBeforeUpdateEmail(user, email);
-        setProfileSuccess(
-          "Profile saved. Check your new email to confirm the address change."
-        );
-      } else {
-        setProfileSuccess("Profile updated successfully.");
-      }
+      setProfileSuccess("Profile updated successfully.");
     } catch (err: any) {
       setProfileError(friendlyError(err?.code));
     } finally {
@@ -190,6 +184,21 @@ export default function ProfilePage() {
     try {
       const cred = EmailAuthProvider.credential(user.email, deletePassword);
       await reauthenticateWithCredential(user, cred);
+
+      // Clean up Firestore data first (wallet, rentals, transactions) —
+      // needs a fresh token since we just reauthenticated.
+      const token = await user.getIdToken(true);
+      const res = await fetch("/api/account/delete-data", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.error) {
+        setDeleteError(data.error);
+        setDeleteLoading(false);
+        return;
+      }
+
       await deleteUser(user);
       router.push("/");
     } catch (err: any) {
@@ -335,9 +344,18 @@ export default function ProfilePage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                    disabled
+                    style={{ opacity: 0.6, cursor: "not-allowed" }}
                   />
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--paper-dim)",
+                      marginTop: "6px",
+                    }}
+                  >
+                    Your email address can't be changed.
+                  </div>
                 </div>
                 <div className="field">
                   <label>Phone Number</label>
@@ -475,30 +493,19 @@ export default function ProfilePage() {
               <form className="settings-card" onSubmit={handleChangePassword}>
                 <div className="field">
                   <label>Current password</label>
-                  <input
-                    type={showPw ? "text" : "password"}
-                    placeholder="Current password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label>New password</label>
                   <div style={{ position: "relative" }}>
                     <input
-                      type={showPw ? "text" : "password"}
-                      placeholder="New password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      minLength={8}
+                      type={showCurrentPw ? "text" : "password"}
+                      placeholder="Current password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
                       required
                       style={{ paddingRight: "42px" }}
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPw((v) => !v)}
-                      aria-label={showPw ? "Hide passwords" : "Show passwords"}
+                      onClick={() => setShowCurrentPw((v) => !v)}
+                      aria-label={showCurrentPw ? "Hide password" : "Show password"}
                       style={{
                         position: "absolute",
                         right: "12px",
@@ -512,19 +519,74 @@ export default function ProfilePage() {
                         cursor: "pointer",
                       }}
                     >
-                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showCurrentPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>New password</label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showNewPw ? "text" : "password"}
+                      placeholder="New password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      minLength={8}
+                      required
+                      style={{ paddingRight: "42px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw((v) => !v)}
+                      aria-label={showNewPw ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        display: "flex",
+                        color: "var(--paper-dim)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
                 <div className="field">
                   <label>Confirm password</label>
-                  <input
-                    type={showPw ? "text" : "password"}
-                    placeholder="Confirm password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showConfirmPw ? "text" : "password"}
+                      placeholder="Confirm password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      style={{ paddingRight: "42px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw((v) => !v)}
+                      aria-label={showConfirmPw ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        display: "flex",
+                        color: "var(--paper-dim)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="submit"
