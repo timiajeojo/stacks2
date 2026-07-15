@@ -12,10 +12,7 @@ import {
   Check,
   X,
   CheckCircle2,
-  Circle,
   Timer,
-  XCircle,
-  AlertCircle,
   Landmark,
   Phone,
   LayoutGrid,
@@ -28,9 +25,14 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
+  startAfter,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 
@@ -61,18 +63,13 @@ type Tx = {
 
 const statusOptions = [
   { value: "all", label: "All Status", icon: null },
-  { value: "created", label: "Created", icon: Circle },
+  { value: "ok", label: "Success", icon: CheckCircle2 },
   { value: "pending", label: "Pending", icon: Timer },
-  { value: "completed", label: "Completed", icon: CheckCircle2 },
-  { value: "cancelled", label: "Cancelled", icon: XCircle },
-  { value: "refunded", label: "Refunded", icon: AlertCircle },
 ];
 
 const paymentOptions = [
   { value: "all", label: "All Payment Methods" },
-  { value: "paystack", label: "Paystack" },
-  { value: "drexpay", label: "Drexpay (Bank transfer)" },
-  { value: "manual", label: "Manual payment" },
+  { value: "Paystack", label: "Paystack" },
 ];
 
 function formatNaira(amount: number) {
@@ -104,6 +101,12 @@ export default function DepositsPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Tx[]>([]);
+  const [olderTransactions, setOlderTransactions] = useState<Tx[]>([]);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const hasPaginatedRef = useRef(false);
+  const PAGE_SIZE = 10;
 
   const [paystackReady, setPaystackReady] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -143,7 +146,8 @@ export default function DepositsPage() {
 
     const txQuery = query(
       collection(db, "users", user.uid, "transactions"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(PAGE_SIZE)
     );
     const unsubTx = onSnapshot(txQuery, (snap) => {
       setTransactions(
@@ -160,6 +164,14 @@ export default function DepositsPage() {
           };
         })
       );
+      // Only keep tracking the cursor from the live page before the user
+      // has started paginating — once they have, freeze it so "Load More"
+      // keeps extending from a stable point instead of shifting underneath.
+      if (!hasPaginatedRef.current) {
+        const last = snap.docs[snap.docs.length - 1] || null;
+        setLastDoc(last);
+        setHasMore(snap.docs.length === PAGE_SIZE);
+      }
     });
 
     return () => {
@@ -172,6 +184,38 @@ export default function DepositsPage() {
     setAmount("");
     setPayError("");
     setModalOpen(true);
+  }
+
+  async function loadMoreTransactions() {
+    if (!user || !lastDoc || loadingMore) return;
+    hasPaginatedRef.current = true;
+    setLoadingMore(true);
+    try {
+      const q = query(
+        collection(db, "users", user.uid, "transactions"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastDoc),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      const newTx: Tx[] = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          kind: data.kind,
+          status: data.status,
+          method: data.method,
+          amount: data.amount,
+          completed: data.completed,
+          createdAt: data.createdAt?.toDate?.() || null,
+        };
+      });
+      setOlderTransactions((prev) => [...prev, ...newTx]);
+      setLastDoc(snap.docs[snap.docs.length - 1] || lastDoc);
+      setHasMore(snap.docs.length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   async function handlePay() {
@@ -306,14 +350,7 @@ export default function DepositsPage() {
               <button className="btn-topup" onClick={openTopUp}>
                 + Top Up
               </button>
-              <button className="btn-autofund">Automatic Funding</button>
             </div>
-          </div>
-
-          <div className="recap-card">
-            <div className="lbl">Current Balance</div>
-            <div className="amount mono">{formatNaira(balance)}</div>
-            <div className="caption">Available for renting numbers</div>
           </div>
 
           <div className="section-label">
@@ -400,73 +437,99 @@ export default function DepositsPage() {
           </div>
 
           <div className="tx-list">
-            {transactions.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "var(--paper-dim)",
-                  fontSize: "13.5px",
-                  padding: "24px 0",
-                }}
-              >
-                No transactions yet.
-              </div>
-            )}
-            {transactions.map((tx) => (
-              <div className="tx-card" key={tx.id}>
-                <div className="tx-top">
-                  <div className="tx-top-left">
-                    <div className={`tx-icon ${tx.kind}`}>
-                      {tx.kind === "credit" ? (
-                        <ArrowDown size={15} />
-                      ) : (
-                        <ArrowUp size={15} />
+            {(() => {
+              const combined = [...transactions, ...olderTransactions];
+              const filtered = combined.filter((tx) => {
+                if (statusFilter !== "all" && tx.status !== statusFilter)
+                  return false;
+                if (paymentFilter !== "all" && tx.method !== paymentFilter)
+                  return false;
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      color: "var(--paper-dim)",
+                      fontSize: "13.5px",
+                      padding: "24px 0",
+                    }}
+                  >
+                    {combined.length === 0
+                      ? "No transactions yet."
+                      : "No transactions match your filters."}
+                  </div>
+                );
+              }
+
+              return filtered.map((tx) => (
+                <div className="tx-card" key={tx.id}>
+                  <div className="tx-top">
+                    <div className="tx-top-left">
+                      <div className={`tx-icon ${tx.kind}`}>
+                        {tx.kind === "credit" ? (
+                          <ArrowDown size={15} />
+                        ) : (
+                          <ArrowUp size={15} />
+                        )}
+                      </div>
+                      <span className="tx-type">
+                        {tx.kind === "credit" ? "Credit" : "Debit"}
+                      </span>
+                      <span className={`status-pill ${tx.status}`}>
+                        <span className="d" />
+                        {tx.status === "ok" ? "Success" : "Pending"}
+                      </span>
+                    </div>
+                    <div className="tx-top-right">
+                      {tx.completed && (
+                        <span className="comp-pill">
+                          <Check size={11} /> Completed
+                        </span>
                       )}
                     </div>
-                    <span className="tx-type">
-                      {tx.kind === "credit" ? "Credit" : "Debit"}
-                    </span>
-                    <span className={`status-pill ${tx.status}`}>
-                      <span className="d" />
-                      {tx.status === "ok" ? "Success" : "Pending"}
-                    </span>
                   </div>
-                  <div className="tx-top-right">
-                    {tx.completed && (
-                      <span className="comp-pill">
-                        <Check size={11} /> Completed
-                      </span>
+                  <div className="tx-meta-row">
+                    {tx.method.startsWith("Number rental") ? (
+                      <Phone size={13} />
+                    ) : (
+                      <Landmark size={13} />
                     )}
+                    {tx.method}
                   </div>
-                </div>
-                <div className="tx-meta-row">
-                  {tx.method.startsWith("Number rental") ? (
-                    <Phone size={13} />
-                  ) : (
-                    <Landmark size={13} />
-                  )}
-                  {tx.method}
-                </div>
-                <div className="tx-grid">
-                  <div>
-                    <div className="lbl">Amount</div>
-                    <div
-                      className={`val mono ${
-                        tx.kind === "credit" ? "pos" : "neg"
-                      }`}
-                    >
-                      {tx.kind === "credit" ? "+" : "-"}
-                      {formatNaira(tx.amount)}
+                  <div className="tx-grid">
+                    <div>
+                      <div className="lbl">Amount</div>
+                      <div
+                        className={`val mono ${
+                          tx.kind === "credit" ? "pos" : "neg"
+                        }`}
+                      >
+                        {tx.kind === "credit" ? "+" : "-"}
+                        {formatNaira(tx.amount)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="lbl">Date</div>
+                      <div className="val date">{formatDate(tx.createdAt)}</div>
                     </div>
                   </div>
-                  <div>
-                    <div className="lbl">Date</div>
-                    <div className="val date">{formatDate(tx.createdAt)}</div>
-                  </div>
                 </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
+
+          {hasMore && (
+            <button
+              className="load-more-btn"
+              onClick={loadMoreTransactions}
+              disabled={loadingMore}
+            >
+              {loadingMore ? "Loading…" : "Show next 10"}
+            </button>
+          )}
         </main>
       </div>
 
