@@ -150,7 +150,7 @@ export default function RentalsPage() {
 
         <main className="dashboard-main">
           <a
-            href="/dashboard/buy-number"
+            href="/dashboard/rentals/new"
             className="btn-purchase enabled"
             style={{ textDecoration: "none" }}
           >
