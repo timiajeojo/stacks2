@@ -1,23 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "../../../lib/firebaseAdmin";
-import { verifyRequestUser } from "../../../lib/verifyAuth";
-import { smspoolFetch } from "../../../lib/smspool";
-import { usdToNgn } from "../../../lib/pricing";
+import { adminDb } from "../../../../lib/firebaseAdmin";
+import { verifyRequestUser } from "../../../../lib/verifyAuth";
+import { smspoolFetch } from "../../../../lib/smspool";
+import { usdToNgn } from "../../../../lib/pricing";
 import { FieldValue } from "firebase-admin/firestore";
-
-type RawPricing = {
-  service: number;
-  service_name: string;
-  country: number;
-  country_name: string;
-  short_name: string;
-  pool: number;
-  price: string;
-};
-
-function stripHtml(input: string): string {
-  return input.replace(/<[^>]*>/g, "").trim();
-}
 
 export async function POST(req: NextRequest) {
   const uid = await verifyRequestUser(req);
@@ -25,39 +11,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const { country, service } = await req.json();
-  if (!country || !service) {
+  const { rentalId, days, countryName } = await req.json();
+  if (!rentalId || !days) {
     return NextResponse.json(
-      { error: "Country and service are required" },
+      { error: "rentalId and days are required" },
       { status: 400 }
     );
   }
 
   try {
-    // Re-fetch pricing server-side — never trust a price the client sends,
-    // it could have been tampered with.
-    const pricingRes = await smspoolFetch("/request/pricing", {
-      country,
-      service,
-    });
+    // Re-derive the authoritative price server-side rather than trusting
+    // whatever the client displayed.
+    const { ok: countriesOk, data: countriesData } = await smspoolFetch(
+      "/rental/retrieve_all",
+      { type: "1" }
+    );
+    const entry = countriesOk && countriesData?.data
+      ? countriesData.data.find((r: any) => String(r.ID) === String(rentalId))
+      : null;
 
-    if (
-      !pricingRes.ok ||
-      !Array.isArray(pricingRes.data) ||
-      pricingRes.data.length === 0
-    ) {
+    const usdPrice = entry?.pricing?.[String(days)];
+    if (!usdPrice) {
       return NextResponse.json(
-        { error: "No pricing available for this country/service" },
-        { status: 404 }
+        { error: "Invalid rental/duration combination" },
+        { status: 400 }
       );
     }
+    const costNaira = Math.ceil(usdToNgn(Number(usdPrice)));
 
-    const cheapest = (pricingRes.data as RawPricing[]).reduce((min, p) =>
-      Number(p.price) < Number(min.price) ? p : min
-    );
-    const costNaira = Math.ceil(usdToNgn(Number(cheapest.price)));
-
-    // Check wallet balance before spending anything
     const userRef = adminDb.collection("users").doc(uid);
     const userSnap = await userRef.get();
     const walletBalance = userSnap.exists
@@ -71,61 +52,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Place the actual order with SMSPool
-    const buyRes = await smspoolFetch("/purchase/sms", {
-      country,
-      service,
-      pool: String(cheapest.pool),
-      quantity: "1",
-      activation_type: "SMS",
+    const buyRes = await smspoolFetch("/purchase/rental", {
+      id: String(rentalId),
+      days: String(days),
+      create_token: "0",
     });
 
     if (!buyRes.ok || !buyRes.data?.success) {
-      const rawMessage = buyRes.data?.message || "Purchase failed";
       return NextResponse.json(
-        { error: stripHtml(rawMessage) },
+        { error: buyRes.data?.message || "Rental purchase failed" },
         { status: 422 }
       );
     }
 
     const order = buyRes.data;
-    const orderId = String(order.order_id);
-    const expiresInSeconds = Number(order.expires_in) || 1200;
-    const expiresAtMs = Date.now() + expiresInSeconds * 1000;
+    const rentalCode = String(order.rental_code);
 
-    // Deduct wallet + create the rental record atomically
-    const rentalRef = userRef.collection("rentals").doc(orderId);
+    const rentalRef = userRef.collection("longTermRentals").doc(rentalCode);
     await adminDb.runTransaction(async (t) => {
       t.set(userRef, { walletBalance: FieldValue.increment(-costNaira) }, {
         merge: true,
       });
       t.set(rentalRef, {
-        orderId,
-        number: `+${order.cc}${order.phonenumber}`,
-        country: order.country,
-        countryCode: cheapest.short_name,
-        service: order.service,
-        pool: order.pool,
+        rentalCode,
+        number: order.phonenumber,
+        country: countryName || "",
+        days: order.days,
         costNaira,
-        costUsd: Number(cheapest.price),
-        status: "waiting",
-        otpsReceived: 0,
-        lastCode: null,
-        lastSmsText: null,
+        expiresAt: Number(order.expiry) * 1000,
+        status: "pending", // takes up to 24-48h to activate per SMSPool
         purchasedAt: FieldValue.serverTimestamp(),
-        expiresAt: expiresAtMs,
       });
     });
 
-    return NextResponse.json({
-      success: true,
-      rentalId: orderId,
-      number: `+${order.cc}${order.phonenumber}`,
-    });
+    return NextResponse.json({ success: true, rentalCode });
   } catch (err: any) {
-    console.error("SMSPool purchase error:", err);
+    console.error("SMSPool rental purchase error:", err);
     return NextResponse.json(
-      { error: "Server error placing order" },
+      { error: "Server error placing rental order" },
       { status: 500 }
     );
   }

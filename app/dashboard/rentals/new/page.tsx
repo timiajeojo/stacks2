@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../../lib/firebase";
 import {
   Menu,
   ChevronDown,
-  Search,
   X,
   LayoutGrid,
   ArrowDownToLine,
@@ -63,44 +62,28 @@ function formatNaira(amount: number): string {
   }).format(amount);
 }
 
-const DURATIONS = [
-  { days: 1, label: "1 Day" },
-  { days: 3, label: "3 Days" },
-  { days: 7, label: "7 Days" },
-  { days: 14, label: "14 Days" },
-  { days: 30, label: "30 Days" },
-  { days: 90, label: "90 Days" },
-  { days: 365, label: "1 Year" },
-];
+function durationLabel(days: number): string {
+  if (days === 1) return "1 Day";
+  return `${days} Days`;
+}
 
 type RentalOption = {
   id: number;
   name: string;
   tag: string;
   pool: number;
-  pricingNaira: Record<string, number>;
+  pricingNaira: Record<string, number>; // days -> Naira, straight from SMSPool
 };
-
-type Service = { id: number; name: string };
 
 export default function NewRentalPage() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const [portal1Options, setPortal1Options] = useState<RentalOption[]>([]);
-  const [portal2Options, setPortal2Options] = useState<RentalOption[]>([]);
+  const [options, setOptions] = useState<RentalOption[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeCountryName, setActiveCountryName] = useState("");
-  const [activePortal, setActivePortal] = useState<1 | 2>(1);
-
-  const [services, setServices] = useState<Service[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
-  const [serviceId, setServiceId] = useState("");
-  const [serviceOpen, setServiceOpen] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState("");
-  const serviceRef = useRef<HTMLDivElement>(null);
+  const [activeOption, setActiveOption] = useState<RentalOption | null>(null);
 
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
   const [stockByDays, setStockByDays] = useState<Record<number, number>>({});
@@ -108,90 +91,44 @@ export default function NewRentalPage() {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState("");
 
+  // Single portal only — one source of truth for rental availability.
   useEffect(() => {
-    Promise.all([
-      fetch("/api/smspool/rental/countries?type=1").then((r) => r.json()),
-      fetch("/api/smspool/rental/countries?type=2").then((r) => r.json()),
-    ])
-      .then(([p1, p2]) => {
-        setPortal1Options(p1.options || []);
-        setPortal2Options(p2.options || []);
-      })
+    fetch("/api/smspool/rental/countries?type=1")
+      .then((r) => r.json())
+      .then((data) => setOptions(data.options || []))
       .finally(() => setLoadingCountries(false));
   }, []);
 
-  useEffect(() => {
-    function handleOutsideClick(e: MouseEvent) {
-      if (serviceRef.current && !serviceRef.current.contains(e.target as Node)) {
-        setServiceOpen(false);
-      }
-    }
-    document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
-  }, []);
-
-  // Unique countries across both portals, for the grid
-  const allNames = Array.from(
-    new Set([...portal1Options, ...portal2Options].map((o) => o.name))
-  );
-
-  function optionFor(name: string, portal: 1 | 2): RentalOption | undefined {
-    const list = portal === 1 ? portal1Options : portal2Options;
-    return list.find((o) => o.name === name);
-  }
-
-  const activeOption = optionFor(activeCountryName, activePortal);
-
-  function openCountry(name: string) {
-    setActiveCountryName(name);
-    setActivePortal(optionFor(name, 1) ? 1 : 2);
-    setServiceId("");
-    setServiceSearch("");
+  function openCountry(option: RentalOption) {
+    setActiveOption(option);
     setSelectedDays(null);
     setStockByDays({});
     setPurchaseError("");
     setModalOpen(true);
-  }
 
-  // Load services whenever the active rental option changes
-  useEffect(() => {
-    if (!activeOption) {
-      setServices([]);
-      return;
-    }
-    setServicesLoading(true);
-    setServiceId("");
-    fetch(`/api/smspool/rental/services?rental=${activeOption.id}`)
-      .then((r) => r.json())
-      .then((data) => setServices(data.services || []))
-      .finally(() => setServicesLoading(false));
-  }, [activeOption?.id]);
-
-  // Load stock for every available duration once a service is chosen
-  useEffect(() => {
-    if (!activeOption || !serviceId) return;
-    const days = Object.keys(activeOption.pricingNaira).map(Number);
-    days.forEach((d) => {
-      fetch(`/api/smspool/rental/stock?id=${activeOption.id}&days=${d}`)
+    // Fetch live stock for every duration this country actually offers —
+    // no service selection needed, so this can happen immediately.
+    Object.keys(option.pricingNaira).forEach((days) => {
+      fetch(`/api/smspool/rental/stock?id=${option.id}&days=${days}`)
         .then((r) => r.json())
         .then((data) =>
-          setStockByDays((prev) => ({ ...prev, [d]: data.count || 0 }))
+          setStockByDays((prev) => ({ ...prev, [Number(days)]: data.count || 0 }))
         );
     });
-  }, [activeOption?.id, serviceId]);
+  }
 
-  const filteredServices = services.filter((s) =>
-    s.name.toLowerCase().includes(serviceSearch.toLowerCase())
-  );
-  const selectedService = services.find((s) => String(s.id) === serviceId);
+  const availableDurations = activeOption
+    ? Object.keys(activeOption.pricingNaira)
+        .map(Number)
+        .sort((a, b) => a - b)
+    : [];
 
   const priceForSelected =
     activeOption && selectedDays
       ? activeOption.pricingNaira[String(selectedDays)]
       : null;
 
-  const readyToPurchase =
-    !!activeOption && !!serviceId && !!selectedDays && !!priceForSelected;
+  const readyToPurchase = !!activeOption && !!selectedDays && !!priceForSelected;
 
   async function handlePurchase() {
     if (!auth.currentUser || !activeOption || !selectedDays) {
@@ -211,7 +148,6 @@ export default function NewRentalPage() {
         body: JSON.stringify({
           rentalId: activeOption.id,
           days: selectedDays,
-          serviceId,
           countryName: activeOption.name,
         }),
       });
@@ -305,20 +241,20 @@ export default function NewRentalPage() {
             <div style={{ color: "var(--paper-dim)", fontSize: "13.5px" }}>
               Loading countries…
             </div>
-          ) : allNames.length === 0 ? (
+          ) : options.length === 0 ? (
             <div style={{ color: "var(--paper-dim)", fontSize: "13.5px" }}>
               No rental countries available right now.
             </div>
           ) : (
             <div className="country-grid">
-              {allNames.map((name) => (
+              {options.map((opt) => (
                 <div
-                  key={name}
+                  key={opt.id}
                   className="country-card"
-                  onClick={() => openCountry(name)}
+                  onClick={() => openCountry(opt)}
                 >
-                  <div className="flag">{flagEmoji(name)}</div>
-                  <div className="name">{name}</div>
+                  <div className="flag">{flagEmoji(opt.name)}</div>
+                  <div className="name">{opt.name}</div>
                 </div>
               ))}
             </div>
@@ -339,116 +275,29 @@ export default function NewRentalPage() {
             <X size={20} />
           </button>
         </div>
-        <div className="sub">Long-term Numbers.</div>
-
-        <div className="portal-grid">
-          <div
-            className={`portal-tab ${activePortal === 1 ? "active" : ""} ${
-              !optionFor(activeCountryName, 1) ? "disabled" : ""
-            }`}
-            style={
-              !optionFor(activeCountryName, 1)
-                ? { opacity: 0.35, cursor: "default" }
-                : undefined
-            }
-            onClick={() => {
-              if (optionFor(activeCountryName, 1)) setActivePortal(1);
-            }}
-          >
-            Portal 1
-          </div>
-          <div
-            className={`portal-tab ${activePortal === 2 ? "active" : ""}`}
-            style={
-              !optionFor(activeCountryName, 2)
-                ? { opacity: 0.35, cursor: "default" }
-                : undefined
-            }
-            onClick={() => {
-              if (optionFor(activeCountryName, 2)) setActivePortal(2);
-            }}
-          >
-            Portal 2
-          </div>
-        </div>
-
-        <div className="field select-wrap" ref={serviceRef}>
-          <span className="field-label">Select service</span>
-          <button
-            type="button"
-            className={`select-trigger ${!selectedService ? "placeholder" : ""}`}
-            disabled={servicesLoading}
-            onClick={() => setServiceOpen((v) => !v)}
-          >
-            <span className="label-text">
-              {servicesLoading
-                ? "Loading services…"
-                : selectedService
-                ? selectedService.name
-                : "Select service..."}
-            </span>
-            <ChevronDown className="chev" size={14} />
-          </button>
-          {serviceOpen && (
-            <div className="select-dropdown">
-              <div className="select-dropdown-search">
-                <Search size={14} />
-                <input
-                  placeholder="Search services…"
-                  value={serviceSearch}
-                  onChange={(e) => setServiceSearch(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="select-dropdown-list">
-                {filteredServices.length === 0 ? (
-                  <div className="select-dropdown-empty">No services found</div>
-                ) : (
-                  filteredServices.map((s) => (
-                    <div
-                      key={s.id}
-                      className={`select-dropdown-item ${
-                        serviceId === String(s.id) ? "selected" : ""
-                      }`}
-                      onClick={() => {
-                        setServiceId(String(s.id));
-                        setServiceOpen(false);
-                        setServiceSearch("");
-                        setSelectedDays(null);
-                      }}
-                    >
-                      {s.name}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+        <div className="sub">
+          {activeOption ? `${activeOption.name} — Long-term Numbers.` : "Long-term Numbers."}
         </div>
 
         <div className="field">
           <span className="field-label">Select duration</span>
           <div className="duration-grid">
-            {DURATIONS.map((d) => {
-              const priceNaira = activeOption?.pricingNaira[String(d.days)];
-              const available = !!priceNaira && !!serviceId;
-              const stock = stockByDays[d.days];
+            {availableDurations.map((days) => {
+              const priceNaira = activeOption?.pricingNaira[String(days)];
+              const stock = stockByDays[days];
               return (
                 <button
-                  key={d.days}
-                  className={`duration-btn ${
-                    selectedDays === d.days ? "selected" : ""
-                  }`}
-                  disabled={!available}
-                  onClick={() => setSelectedDays(d.days)}
+                  key={days}
+                  className={`duration-btn ${selectedDays === days ? "selected" : ""}`}
+                  onClick={() => setSelectedDays(days)}
                 >
-                  <div className="d-label">{d.label}</div>
+                  <div className="d-label">{durationLabel(days)}</div>
                   <div className="d-price">
                     {priceNaira ? formatNaira(priceNaira) : "—"}
                   </div>
-                  {available && stock !== undefined && (
-                    <div className="d-stock">{stock} in stock</div>
-                  )}
+                  <div className="d-stock">
+                    {stock !== undefined ? `${stock} in stock` : "Checking stock…"}
+                  </div>
                 </button>
               );
             })}
