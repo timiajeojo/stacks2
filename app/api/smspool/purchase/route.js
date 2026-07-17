@@ -38,11 +38,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = void 0;
 var server_1 = require("next/server");
-var firebaseAdmin_1 = require("../../../../lib/firebaseAdmin");
-var verifyAuth_1 = require("../../../../lib/verifyAuth");
-var smspool_1 = require("../../../../lib/smspool");
-var pricing_1 = require("../../../../lib/pricing");
-var firestore_1 = require("firebase-admin/firestore");
+var firebaseAdmin_1 = require("../../../lib/firebaseAdmin");
+var verifyAuth_1 = require("../../../lib/verifyAuth");
+var smspool_1 = require("../../../lib/smspool");
+var pricing_1 = require("../../../lib/pricing");
 function POST(req) {
     var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function () {
@@ -101,7 +100,7 @@ function POST(req) {
                     rentalRef_1 = userRef_1.collection("longTermRentals").doc(rentalCode_1);
                     return [4 /*yield*/, firebaseAdmin_1.adminDb.runTransaction(function (t) { return __awaiter(_this, void 0, void 0, function () {
                             return __generator(this, function (_a) {
-                                t.set(userRef_1, { walletBalance: firestore_1.FieldValue.increment(-costNaira_1) }, {
+                                t.set(userRef_1, { walletBalance: FieldValue.increment(-costNaira_1) }, {
                                     merge: true,
                                 });
                                 t.set(rentalRef_1, {
@@ -112,7 +111,7 @@ function POST(req) {
                                     costNaira: costNaira_1,
                                     expiresAt: Number(order_1.expiry) * 1000,
                                     status: "pending",
-                                    purchasedAt: firestore_1.FieldValue.serverTimestamp(),
+                                    purchasedAt: FieldValue.serverTimestamp(),
                                 });
                                 return [2 /*return*/];
                             });

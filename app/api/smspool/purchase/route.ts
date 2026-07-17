@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "../../../../lib/firebaseAdmin";
-import { verifyRequestUser } from "../../../../lib/verifyAuth";
-import { smspoolFetch } from "../../../../lib/smspool";
-import { usdToNgn } from "../../../../lib/pricing";
-import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "../../../lib/firebaseAdmin";
+import { verifyRequestUser } from "../../../lib/verifyAuth";
+import { smspoolFetch } from "../../../lib/smspool";
+import { usdToNgn } from "../../../lib/pricing";
 
 export async function POST(req: NextRequest) {
   const uid = await verifyRequestUser(req);
