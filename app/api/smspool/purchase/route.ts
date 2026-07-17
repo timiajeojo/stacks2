@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "../../../lib/firebaseAdmin";
 import { verifyRequestUser } from "../../../lib/verifyAuth";
 import { smspoolFetch } from "../../../lib/smspool";
