@@ -1,23 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, onSnapshot, orderBy, query, limit, Timestamp } from "firebase/firestore";
+import { auth, db } from "../../lib/firebase";
 import {
   Menu,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Search,
   Plus,
   Check,
-  Circle,
-  CheckCircle2,
   Timer,
-  Info,
+  CheckCircle2,
   AlertCircle,
   XCircle,
-  ArrowUp,
-  ArrowDown,
-  EyeOff,
   LayoutGrid,
   ArrowDownToLine,
   Package,
@@ -31,62 +32,120 @@ const navItems = [
   { label: "Rentals", href: "/dashboard/rentals", icon: Package, active: true },
 ];
 
-const statusOptions = [
-  { value: "created", label: "Created", icon: Circle },
+type RentalStatus = "pending" | "active" | "expired" | "cancelled";
+
+type Rental = {
+  id: string;
+  number: string;
+  country: string;
+  status: RentalStatus;
+  expiresAt: number | null;
+  purchasedAt: Timestamp | null;
+};
+
+const statusOptions: { value: RentalStatus; label: string; icon: any }[] = [
   { value: "pending", label: "Pending", icon: Timer },
   { value: "active", label: "Active", icon: CheckCircle2 },
-  { value: "inactive", label: "Inactive", icon: Info },
   { value: "expired", label: "Expired", icon: AlertCircle },
   { value: "cancelled", label: "Cancelled", icon: XCircle },
 ];
 
-type SortableCol = "status" | "expiredAt" | "created";
-const sortableColumns: { key: SortableCol; label: string }[] = [
-  { key: "status", label: "Status" },
-  { key: "expiredAt", label: "Expired At" },
-  { key: "created", label: "Created" },
-];
+function formatExpiration(ms: number | null): string {
+  if (!ms) return "—";
+  const date = new Date(ms);
+  const isPast = ms < Date.now();
+  const formatted = date.toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return isPast ? `${formatted} (expired)` : formatted;
+}
+
+const PAGE_SIZE = 10;
 
 export default function RentalsPage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [statusSearch, setStatusSearch] = useState("");
-  const [checkedStatuses, setCheckedStatuses] = useState<string[]>([]);
-  const [openColMenu, setOpenColMenu] = useState<SortableCol | null>(null);
-  const [hiddenCols, setHiddenCols] = useState<SortableCol[]>([]);
-  const [sortState, setSortState] = useState<
-    Record<SortableCol, "asc" | "desc" | null>
-  >({ status: null, expiredAt: null, created: null });
+  const [checkedStatuses, setCheckedStatuses] = useState<RentalStatus[]>([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const filterRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+      const q = query(
+        collection(db, "users", user.uid, "longTermRentals"),
+        orderBy("purchasedAt", "desc"),
+        limit(200)
+      );
+      const unsubRentals = onSnapshot(q, (snap) => {
+        setRentals(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Rental)));
+        setLoading(false);
+      });
+      return () => unsubRentals();
+    });
+    return () => unsub();
+  }, [router]);
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
-      const target = e.target as Node;
-      if (filterRef.current && !filterRef.current.contains(target)) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
         setStatusFilterOpen(false);
-      }
-      if (tableRef.current && !tableRef.current.contains(target)) {
-        setOpenColMenu(null);
       }
     }
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
   }, []);
 
-  function toggleStatus(value: string) {
+  function toggleStatus(value: RentalStatus) {
     setCheckedStatuses((prev) =>
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
+    setPage(1);
   }
 
   const filteredStatusOptions = statusOptions.filter((s) =>
     s.label.toLowerCase().includes(statusSearch.toLowerCase())
   );
 
-  const visibleColCount =
-    2 + (3 - hiddenCols.length); // Country + Number&Service + up to 3 sortable
+  const filtered = rentals.filter((r) => {
+    if (checkedStatuses.length > 0 && !checkedStatuses.includes(r.status))
+      return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (!`${r.number} ${r.country}`.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageItems = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  // Small window of page numbers around the current page
+  const pageNumbers: number[] = [];
+  for (
+    let p = Math.max(1, currentPage - 1);
+    p <= Math.min(totalPages, currentPage + 1);
+    p++
+  ) {
+    pageNumbers.push(p);
+  }
 
   return (
     <>
@@ -207,80 +266,74 @@ export default function RentalsPage() {
 
           <div className="search-box">
             <Search size={14} />
-            Filter rentals…
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Filter by number or country…"
+              style={{
+                background: "none",
+                border: "none",
+                outline: "none",
+                color: "var(--paper)",
+                fontSize: "13.5px",
+                width: "100%",
+                fontFamily: "inherit",
+              }}
+            />
           </div>
 
-          <div className="table-wrap" ref={tableRef}>
+          <div className="table-wrap">
             <div className="tbl-scroll">
               <table>
                 <thead>
                   <tr>
+                    <th>Number</th>
+                    <th>State</th>
                     <th>Country</th>
-                    <th>Number &amp; Service</th>
-                    <th>Messages</th>
-                    {sortableColumns.map(
-                      (col) =>
-                        !hiddenCols.includes(col.key) && (
-                          <th key={col.key}>
-                            <div
-                              className="th-sortable"
-                              onClick={() =>
-                                setOpenColMenu(
-                                  openColMenu === col.key ? null : col.key
-                                )
-                              }
-                            >
-                              {col.label}
-                              <ChevronDown className="chev" size={13} />
-                            </div>
-                            {openColMenu === col.key && (
-                              <div className="col-menu">
-                                <div
-                                  className="col-menu-item"
-                                  onClick={() => {
-                                    setSortState((s) => ({
-                                      ...s,
-                                      [col.key]: "asc",
-                                    }));
-                                    setOpenColMenu(null);
-                                  }}
-                                >
-                                  <ArrowUp size={14} /> Asc
-                                </div>
-                                <div
-                                  className="col-menu-item"
-                                  onClick={() => {
-                                    setSortState((s) => ({
-                                      ...s,
-                                      [col.key]: "desc",
-                                    }));
-                                    setOpenColMenu(null);
-                                  }}
-                                >
-                                  <ArrowDown size={14} /> Desc
-                                </div>
-                                <div
-                                  className="col-menu-item"
-                                  onClick={() => {
-                                    setHiddenCols((h) => [...h, col.key]);
-                                    setOpenColMenu(null);
-                                  }}
-                                >
-                                  <EyeOff size={14} /> Hide
-                                </div>
-                              </div>
-                            )}
-                          </th>
-                        )
-                    )}
+                    <th>Expiration</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td colSpan={visibleColCount} style={{ textAlign: "right" }}>
-                      No results.
-                    </td>
-                  </tr>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: "center" }}>
+                        Loading…
+                      </td>
+                    </tr>
+                  ) : pageItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: "center" }}>
+                        {rentals.length === 0
+                          ? "No rentals yet."
+                          : "No rentals match your filters."}
+                      </td>
+                    </tr>
+                  ) : (
+                    pageItems.map((r) => (
+                      <tr key={r.id}>
+                        <td className="mono" style={{ textAlign: "left" }}>
+                          {r.number}
+                        </td>
+                        <td style={{ textAlign: "left" }}>
+                          <span className={`status-tag ${r.status}`}>
+                            {statusOptions.find((s) => s.value === r.status)
+                              ?.label || r.status}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "left" }}>{r.country}</td>
+                        <td style={{ textAlign: "left" }}>
+                          {formatExpiration(r.expiresAt)}
+                        </td>
+                        <td style={{ textAlign: "left" }}>
+                          <button className="manage-btn">Manage</button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -289,27 +342,44 @@ export default function RentalsPage() {
             <i />
           </div>
 
-          {hiddenCols.length > 0 && (
-            <button
-              className="filter-chip"
-              style={{ marginBottom: "16px" }}
-              onClick={() => setHiddenCols([])}
-            >
-              Show hidden columns ({hiddenCols.length})
-            </button>
-          )}
-
-          <div className="pagination">
-            <div className="page-size">
-              10 <ChevronDown size={13} color="var(--paper-dim)" />
-            </div>
-            <div className="page-info">Page 1 of 0</div>
-            <div className="page-nav">
-              <button disabled>
+          <div className="pagination" style={{ justifyContent: "center" }}>
+            <div className="pg-nav">
+              <button
+                className="pg-btn"
+                disabled={currentPage === 1}
+                onClick={() => setPage(1)}
+              >
+                <ChevronsLeft size={15} />
+              </button>
+              <button
+                className="pg-btn"
+                disabled={currentPage === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
                 <ChevronLeft size={15} />
               </button>
-              <button disabled>
+              {pageNumbers.map((p) => (
+                <button
+                  key={p}
+                  className={`pg-btn ${p === currentPage ? "active" : ""}`}
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                className="pg-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
                 <ChevronRight size={15} />
+              </button>
+              <button
+                className="pg-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setPage(totalPages)}
+              >
+                <ChevronsRight size={15} />
               </button>
             </div>
           </div>
