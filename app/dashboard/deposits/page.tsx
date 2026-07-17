@@ -6,6 +6,10 @@ import Script from "next/script";
 import {
   Menu,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Search,
   ArrowDown,
   ArrowUp,
@@ -25,14 +29,10 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import {
   collection,
   doc,
-  getDocs,
-  limit,
   onSnapshot,
   orderBy,
   query,
-  startAfter,
-  QueryDocumentSnapshot,
-  DocumentData,
+  limit,
 } from "firebase/firestore";
 import { auth, db } from "../../lib/firebase";
 
@@ -101,11 +101,7 @@ export default function DepositsPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Tx[]>([]);
-  const [olderTransactions, setOlderTransactions] = useState<Tx[]>([]);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const hasPaginatedRef = useRef(false);
+  const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
   const [paystackReady, setPaystackReady] = useState(false);
@@ -147,7 +143,7 @@ export default function DepositsPage() {
     const txQuery = query(
       collection(db, "users", user.uid, "transactions"),
       orderBy("createdAt", "desc"),
-      limit(PAGE_SIZE)
+      limit(200)
     );
     const unsubTx = onSnapshot(txQuery, (snap) => {
       setTransactions(
@@ -164,14 +160,6 @@ export default function DepositsPage() {
           };
         })
       );
-      // Only keep tracking the cursor from the live page before the user
-      // has started paginating — once they have, freeze it so "Load More"
-      // keeps extending from a stable point instead of shifting underneath.
-      if (!hasPaginatedRef.current) {
-        const last = snap.docs[snap.docs.length - 1] || null;
-        setLastDoc(last);
-        setHasMore(snap.docs.length === PAGE_SIZE);
-      }
     });
 
     return () => {
@@ -184,38 +172,6 @@ export default function DepositsPage() {
     setAmount("");
     setPayError("");
     setModalOpen(true);
-  }
-
-  async function loadMoreTransactions() {
-    if (!user || !lastDoc || loadingMore) return;
-    hasPaginatedRef.current = true;
-    setLoadingMore(true);
-    try {
-      const q = query(
-        collection(db, "users", user.uid, "transactions"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        limit(PAGE_SIZE)
-      );
-      const snap = await getDocs(q);
-      const newTx: Tx[] = snap.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          kind: data.kind,
-          status: data.status,
-          method: data.method,
-          amount: data.amount,
-          completed: data.completed,
-          createdAt: data.createdAt?.toDate?.() || null,
-        };
-      });
-      setOlderTransactions((prev) => [...prev, ...newTx]);
-      setLastDoc(snap.docs[snap.docs.length - 1] || lastDoc);
-      setHasMore(snap.docs.length === PAGE_SIZE);
-    } finally {
-      setLoadingMore(false);
-    }
   }
 
   async function handlePay() {
@@ -385,6 +341,7 @@ export default function DepositsPage() {
                       }`}
                       onClick={() => {
                         setStatusFilter(opt.value);
+                        setPage(1);
                         setStatusOpen(false);
                       }}
                     >
@@ -422,6 +379,7 @@ export default function DepositsPage() {
                       }`}
                       onClick={() => {
                         setPaymentFilter(opt.value);
+                        setPage(1);
                         setPaymentOpen(false);
                       }}
                     >
@@ -438,8 +396,7 @@ export default function DepositsPage() {
 
           <div className="tx-list">
             {(() => {
-              const combined = [...transactions, ...olderTransactions];
-              const filtered = combined.filter((tx) => {
+              const filtered = transactions.filter((tx) => {
                 if (statusFilter !== "all" && tx.status !== statusFilter)
                   return false;
                 if (paymentFilter !== "all" && tx.method !== paymentFilter)
@@ -457,79 +414,132 @@ export default function DepositsPage() {
                       padding: "24px 0",
                     }}
                   >
-                    {combined.length === 0
+                    {transactions.length === 0
                       ? "No transactions yet."
                       : "No transactions match your filters."}
                   </div>
                 );
               }
 
-              return filtered.map((tx) => (
-                <div className="tx-card" key={tx.id}>
-                  <div className="tx-top">
-                    <div className="tx-top-left">
-                      <div className={`tx-icon ${tx.kind}`}>
-                        {tx.kind === "credit" ? (
-                          <ArrowDown size={15} />
+              const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+              const currentPage = Math.min(page, totalPages);
+              const pageItems = filtered.slice(
+                (currentPage - 1) * PAGE_SIZE,
+                currentPage * PAGE_SIZE
+              );
+              const pageNumbers: number[] = [];
+              for (
+                let p = Math.max(1, currentPage - 1);
+                p <= Math.min(totalPages, currentPage + 1);
+                p++
+              ) {
+                pageNumbers.push(p);
+              }
+
+              return (
+                <>
+                  {pageItems.map((tx) => (
+                    <div className="tx-card" key={tx.id}>
+                      <div className="tx-top">
+                        <div className="tx-top-left">
+                          <div className={`tx-icon ${tx.kind}`}>
+                            {tx.kind === "credit" ? (
+                              <ArrowDown size={15} />
+                            ) : (
+                              <ArrowUp size={15} />
+                            )}
+                          </div>
+                          <span className="tx-type">
+                            {tx.kind === "credit" ? "Credit" : "Debit"}
+                          </span>
+                          <span className={`status-pill ${tx.status}`}>
+                            <span className="d" />
+                            {tx.status === "ok" ? "Success" : "Pending"}
+                          </span>
+                        </div>
+                        <div className="tx-top-right">
+                          {tx.completed && (
+                            <span className="comp-pill">
+                              <Check size={11} /> Completed
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="tx-meta-row">
+                        {tx.method.startsWith("Number rental") ? (
+                          <Phone size={13} />
                         ) : (
-                          <ArrowUp size={15} />
+                          <Landmark size={13} />
                         )}
+                        {tx.method}
                       </div>
-                      <span className="tx-type">
-                        {tx.kind === "credit" ? "Credit" : "Debit"}
-                      </span>
-                      <span className={`status-pill ${tx.status}`}>
-                        <span className="d" />
-                        {tx.status === "ok" ? "Success" : "Pending"}
-                      </span>
-                    </div>
-                    <div className="tx-top-right">
-                      {tx.completed && (
-                        <span className="comp-pill">
-                          <Check size={11} /> Completed
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="tx-meta-row">
-                    {tx.method.startsWith("Number rental") ? (
-                      <Phone size={13} />
-                    ) : (
-                      <Landmark size={13} />
-                    )}
-                    {tx.method}
-                  </div>
-                  <div className="tx-grid">
-                    <div>
-                      <div className="lbl">Amount</div>
-                      <div
-                        className={`val mono ${
-                          tx.kind === "credit" ? "pos" : "neg"
-                        }`}
-                      >
-                        {tx.kind === "credit" ? "+" : "-"}
-                        {formatNaira(tx.amount)}
+                      <div className="tx-grid">
+                        <div>
+                          <div className="lbl">Amount</div>
+                          <div
+                            className={`val mono ${
+                              tx.kind === "credit" ? "pos" : "neg"
+                            }`}
+                          >
+                            {tx.kind === "credit" ? "+" : "-"}
+                            {formatNaira(tx.amount)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="lbl">Date</div>
+                          <div className="val date">{formatDate(tx.createdAt)}</div>
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="lbl">Date</div>
-                      <div className="val date">{formatDate(tx.createdAt)}</div>
+                  ))}
+
+                  {totalPages > 1 && (
+                    <div className="pagination" style={{ justifyContent: "center", marginTop: "8px" }}>
+                      <div className="pg-nav">
+                        <button
+                          className="pg-btn"
+                          disabled={currentPage === 1}
+                          onClick={() => setPage(1)}
+                        >
+                          <ChevronsLeft size={15} />
+                        </button>
+                        <button
+                          className="pg-btn"
+                          disabled={currentPage === 1}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        {pageNumbers.map((p) => (
+                          <button
+                            key={p}
+                            className={`pg-btn ${p === currentPage ? "active" : ""}`}
+                            onClick={() => setPage(p)}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                        <button
+                          className="pg-btn"
+                          disabled={currentPage === totalPages}
+                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                        <button
+                          className="pg-btn"
+                          disabled={currentPage === totalPages}
+                          onClick={() => setPage(totalPages)}
+                        >
+                          <ChevronsRight size={15} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ));
+                  )}
+                </>
+              );
             })()}
           </div>
-
-          {hasMore && (
-            <button
-              className="load-more-btn"
-              onClick={loadMoreTransactions}
-              disabled={loadingMore}
-            >
-              {loadingMore ? "Loading…" : "Show next 10"}
-            </button>
-          )}
         </main>
       </div>
 

@@ -8,6 +8,10 @@ import { auth, db } from "../../lib/firebase";
 import {
   Menu,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Search,
   Mail,
   Copy,
@@ -89,6 +93,8 @@ export default function VerificationsPage() {
 
   const [copiedNumberId, setCopiedNumberId] = useState<string | null>(null);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const rentalListRef = useRef<HTMLDivElement>(null);
   const filterRowRef = useRef<HTMLDivElement>(null);
@@ -256,7 +262,10 @@ export default function VerificationsPage() {
             <Search size={14} />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search by number, service, or country…"
               style={{
                 background: "none",
@@ -292,6 +301,7 @@ export default function VerificationsPage() {
                     onClick={() => {
                       setStatusFilter("all");
                       setStatusOpen(false);
+                      setPage(1);
                     }}
                   >
                     <div className="left">All Status</div>
@@ -304,6 +314,7 @@ export default function VerificationsPage() {
                       onClick={() => {
                         setStatusFilter(opt.value);
                         setStatusOpen(false);
+                        setPage(1);
                       }}
                     >
                       <div className="left">
@@ -338,6 +349,7 @@ export default function VerificationsPage() {
                       onClick={() => {
                         setServiceFilter(service);
                         setServiceOpen(false);
+                        setPage(1);
                       }}
                     >
                       <div className="left">
@@ -367,15 +379,32 @@ export default function VerificationsPage() {
             </div>
           )}
 
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(filteredRentals.length / PAGE_SIZE));
+            const currentPage = Math.min(page, totalPages);
+            const pageItems = filteredRentals.slice(
+              (currentPage - 1) * PAGE_SIZE,
+              currentPage * PAGE_SIZE
+            );
+            const pageNumbers: number[] = [];
+            for (
+              let p = Math.max(1, currentPage - 1);
+              p <= Math.min(totalPages, currentPage + 1);
+              p++
+            ) {
+              pageNumbers.push(p);
+            }
+
+            return (
           <div className="rental-list" ref={rentalListRef}>
-            {filteredRentals.length === 0 ? (
+            {pageItems.length === 0 ? (
               <div style={{ color: "var(--paper-dim)", fontSize: "13.5px", textAlign: "center", padding: "32px 0" }}>
                 {rentals.length === 0
                   ? "You haven't rented any numbers yet."
                   : "No rentals match your filters."}
               </div>
             ) : (
-              filteredRentals.map((r) => (
+              pageItems.map((r) => (
                 <div className="rental-card" key={r.id}>
                   <div className="rc-top">
                     <div className="rc-flag">📱</div>
@@ -482,6 +511,61 @@ export default function VerificationsPage() {
               ))
             )}
           </div>
+          );
+          })()}
+
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(filteredRentals.length / PAGE_SIZE));
+            const currentPage = Math.min(page, totalPages);
+            if (totalPages <= 1) return null;
+            const pageNumbers: number[] = [];
+            for (
+              let p = Math.max(1, currentPage - 1);
+              p <= Math.min(totalPages, currentPage + 1);
+              p++
+            ) {
+              pageNumbers.push(p);
+            }
+            return (
+              <div className="pagination" style={{ justifyContent: "center", marginTop: "8px" }}>
+                <div className="pg-nav">
+                  <button className="pg-btn" disabled={currentPage === 1} onClick={() => setPage(1)}>
+                    <ChevronsLeft size={15} />
+                  </button>
+                  <button
+                    className="pg-btn"
+                    disabled={currentPage === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  {pageNumbers.map((p) => (
+                    <button
+                      key={p}
+                      className={`pg-btn ${p === currentPage ? "active" : ""}`}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    className="pg-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                  <button
+                    className="pg-btn"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setPage(totalPages)}
+                  >
+                    <ChevronsRight size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </main>
       </div>
     </div>
