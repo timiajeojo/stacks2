@@ -266,7 +266,7 @@ function AuthForm() {
                   />
                   Keep me signed in
                 </label>
-                <a href="#" className="forgot">
+                <a href="/auth/forgot-password" className="forgot">
                   Forgot password?
                 </a>
               </div>

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Menu,
   X,
-  ChevronDown,
   ShoppingCart,
   Phone,
   Wallet,
@@ -17,6 +16,7 @@ import {
   Send,
   MessageSquareCode,
 } from "lucide-react";
+import DrawerUser from "../components/DrawerUser";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
@@ -97,13 +97,7 @@ export default function DashboardPage() {
         ))}
 
         <div className="drawer-bottom">
-          <div className="drawer-user">
-            <div className="left">
-              <div className="avatar">{(name || "T").charAt(0).toUpperCase()}</div>
-              <div className="name">{name || "Account"}</div>
-            </div>
-            <ChevronDown size={16} color="var(--paper-dim)" />
-          </div>
+          <DrawerUser />
         </div>
       </nav>
 

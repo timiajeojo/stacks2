@@ -27,6 +27,7 @@ import {
   Send,
   MessageSquareCode,
 } from "lucide-react";
+import DrawerUser from "../../components/DrawerUser";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -220,13 +221,7 @@ export default function VerificationsPage() {
         ))}
 
         <div className="drawer-bottom">
-          <div className="drawer-user">
-            <div className="left">
-              <div className="avatar">T</div>
-              <div className="name">Timi</div>
-            </div>
-            <ChevronDown size={16} color="var(--paper-dim)" />
-          </div>
+          <DrawerUser />
         </div>
       </nav>
 

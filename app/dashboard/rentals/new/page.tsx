@@ -6,7 +6,6 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../../lib/firebase";
 import {
   Menu,
-  ChevronDown,
   X,
   LayoutGrid,
   ArrowDownToLine,
@@ -14,6 +13,7 @@ import {
   Package,
   MessageSquareCode,
 } from "lucide-react";
+import DrawerUser from "../../../components/DrawerUser";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -195,13 +195,7 @@ export default function NewRentalPage() {
         ))}
 
         <div className="drawer-bottom">
-          <div className="drawer-user">
-            <div className="left">
-              <div className="avatar">T</div>
-              <div className="name">Timi</div>
-            </div>
-            <ChevronDown size={16} color="var(--paper-dim)" />
-          </div>
+          <DrawerUser />
         </div>
       </nav>
 

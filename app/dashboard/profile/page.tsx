@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Menu,
-  ChevronDown,
   Eye,
   EyeOff,
   Sun,
@@ -16,6 +15,7 @@ import {
   Package,
   MessageSquareCode,
 } from "lucide-react";
+import DrawerUser from "../../components/DrawerUser";
 import {
   EmailAuthProvider,
   User as FirebaseUser,
@@ -234,15 +234,7 @@ export default function ProfilePage() {
         ))}
 
         <div className="drawer-bottom">
-          <div className="drawer-user">
-            <div className="left">
-              <div className="avatar">
-                {(name || "T").charAt(0).toUpperCase()}
-              </div>
-              <div className="name">{name || "Account"}</div>
-            </div>
-            <ChevronDown size={16} color="var(--paper-dim)" />
-          </div>
+          <DrawerUser />
         </div>
       </nav>
 
@@ -567,7 +559,7 @@ export default function ProfilePage() {
                       required
                       style={{ paddingRight: "42px" }}
                     />
-                    <button
+<button
                       type="button"
                       onClick={() => setShowConfirmPw((v) => !v)}
                       aria-label={showConfirmPw ? "Hide password" : "Show password"}
