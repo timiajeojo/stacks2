@@ -857,3 +857,33 @@ html[data-theme='light']{
 .status-tag.active{background:rgba(69,217,184,0.12); color:var(--teal);}
 .status-tag.expired{background:rgba(135,145,168,0.12); color:var(--paper-dim);}
 .status-tag.cancelled{background:rgba(255,92,92,0.12); color:var(--danger);}
+
+/* DRAWER USER MENU */
+.drawer-user-wrap{position:relative;}
+.drawer-user{cursor:pointer;}
+.drawer-user-menu{
+  position:absolute; bottom:calc(100% + 8px); left:0; right:0; z-index:60;
+  background:var(--ink); border:1px solid var(--ink-3); border-radius:12px; overflow:hidden;
+  box-shadow:0 -12px 30px -8px rgba(0,0,0,0.5);
+}
+.dum-header{display:flex; align-items:center; gap:10px; padding:14px 14px; border-bottom:1px solid var(--ink-3);}
+.dum-header .name{font-size:14px; font-weight:600;}
+.dum-header .email{font-size:12px; color:var(--paper-dim); word-break:break-all;}
+.dum-item{
+  display:flex; align-items:center; gap:11px; padding:12px 14px; font-size:13.5px; color:var(--paper);
+  cursor:pointer; border-bottom:1px solid var(--ink-3);
+}
+.dum-item:last-child{border-bottom:none;}
+.dum-item:hover{background:var(--ink-2);}
+.dum-item.danger{color:var(--danger);}
+
+/* FORGOT PASSWORD PAGE */
+.fp-screen{min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 20px;}
+.fp-brand{display:flex; align-items:center; gap:10px; margin-bottom:32px;}
+.fp-brand span{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px;}
+.fp-card{width:100%; max-width:400px; background:var(--ink-2); border:1px solid var(--ink-3); border-radius:16px; padding:32px 28px; text-align:center;}
+.fp-card h1{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; margin-bottom:8px;}
+.fp-card .sub{font-size:13.5px; color:var(--paper-dim); line-height:1.5; margin-bottom:24px;}
+.fp-card .field{text-align:left; margin-bottom:22px;}
+.fp-return{margin-top:20px; font-size:13.5px; color:var(--paper-dim);}
+.fp-return a{color:var(--blue); text-decoration:underline;}
