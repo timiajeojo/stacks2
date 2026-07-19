@@ -32,8 +32,16 @@ export default function ForgotPasswordPage() {
         setError("Enter a valid email address.");
       } else if (err?.code === "auth/too-many-requests") {
         setError("Too many attempts. Please wait a moment and try again.");
+      } else if (err?.code === "auth/unauthorized-continue-uri") {
+        setError(
+          "This site isn't authorized in Firebase yet. Add this domain under Authentication → Settings → Authorized domains."
+        );
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(
+          err?.code
+            ? `Something went wrong (${err.code}). Please try again.`
+            : "Something went wrong. Please try again."
+        );
       }
     } finally {
       setLoading(false);
