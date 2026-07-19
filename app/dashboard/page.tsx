@@ -176,10 +176,9 @@ export default function DashboardPage() {
                 <X size={14} />
               </button>
               <p>
-                Join our Whatsapp channel for customer support and quick
+                Join our Whatsapp Group for customer support and quick
                 updates on available numbers.
               </p>
-            
                 <a
                   href="https://chat.whatsapp.com/INnT4qESqbGClIdJmaYYHR?s=cl&p=a&mlu=0"
                    target="_blank"
@@ -187,9 +186,8 @@ export default function DashboardPage() {
                     className="telegram-btn"
                     >
                      <Send size={14} />
-                      Join Whatsapp Channel →
+                      Join Whatsapp Group →
                     </a>
-              
             </div>
           )}
         </main>

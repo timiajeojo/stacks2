@@ -364,13 +364,18 @@ export default function VerificationsPage() {
                 <X size={14} />
               </button>
               <p>
-                Make sure to join our Telegram channel for customer support
+                Make sure to join our Whatsapp Group for customer support
                 and quick updates on available numbers.
               </p>
-              <button className="telegram-btn">
-                <Send size={14} />
-                Join Telegram Channel →
-              </button>
+              <a
+                 href="https://chat.whatsapp.com/INnT4qESqbGClIdJmaYYHR?s=cl&p=a&mlu=0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                   className="telegram-btn"
+                   >
+                    <Send size={14} />
+                   Join Whatsapp Group →
+                   </a>
             </div>
           )}
 
