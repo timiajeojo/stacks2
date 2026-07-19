@@ -16,7 +16,10 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, {
+        url: `${window.location.origin}/auth/reset-password`,
+        handleCodeInApp: true,
+      });
       setSent(true);
     } catch (err: any) {
       // Deliberately don't reveal whether the email exists — showing a
